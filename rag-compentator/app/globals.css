@@ -1,0 +1,811 @@
+@import "tailwindcss";
+
+/* ============================================
+   NEO-BRUTALISM DESIGN SYSTEM
+   Bold. Raw. Unapologetic.
+   ============================================ */
+
+:root {
+  /* PRIMARY COLORS - Bold & Saturated */
+  --neo-yellow: #ffff00;
+  --neo-pink: #ff006e;
+  --neo-cyan: #00ffff;
+  --neo-lime: #ccff00;
+  --neo-purple: #9d00ff;
+  --neo-orange: #ff6b00;
+  --neo-red: #ff0000;
+
+  /* BASE COLORS */
+  --neo-black: #000000;
+  --neo-white: #ffffff;
+  --neo-cream: #fffef0;
+
+  /* FUNCTIONAL COLORS */
+  --bg-primary: var(--neo-black);
+  --bg-secondary: var(--neo-yellow);
+  --bg-card: var(--neo-white);
+  --bg-main: var(--neo-cream);
+  --bg-accent: var(--neo-pink);
+  --bg-highlight: var(--neo-cyan);
+
+  /* Text Colors */
+  --text-primary: var(--neo-black);
+  --text-secondary: var(--neo-black);
+  --text-on-dark: var(--neo-white);
+  --text-on-yellow: var(--neo-black);
+  --text-on-pink: var(--neo-white);
+
+  /* BORDERS - Thick & Black */
+  --border-brutal: 4px solid var(--neo-black);
+  --border-thick: 5px solid var(--neo-black);
+  --border-emphasis: 6px solid var(--neo-black);
+  --border-light: 3px solid var(--neo-black);
+
+  /* SHADOWS - Hard & Offset */
+  --shadow-brutal-sm: 4px 4px 0px var(--neo-black);
+  --shadow-brutal: 6px 6px 0px var(--neo-black);
+  --shadow-brutal-md: 8px 8px 0px var(--neo-black);
+  --shadow-brutal-lg: 12px 12px 0px var(--neo-black);
+  --shadow-brutal-color: 6px 6px 0px var(--neo-pink);
+
+  /* Spacing - Generous */
+  --spacing-xs: 8px;
+  --spacing-sm: 16px;
+  --spacing-md: 24px;
+  --spacing-lg: 32px;
+  --spacing-xl: 48px;
+  --spacing-2xl: 64px;
+
+  /* Border Radius - Angular or None */
+  --radius-sm: 0px;
+  --radius-md: 2px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-full: 4px;
+
+  /* Typography */
+  --font-weight-normal: 600;
+  --font-weight-bold: 800;
+  --font-weight-black: 900;
+
+  /* Transitions - Hard & Quick */
+  --transition-fast: 100ms ease;
+  --transition-normal: 100ms ease;
+  --transition-slow: 150ms ease;
+}
+
+@theme inline {
+  --color-background: var(--bg-main);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font-family: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
+  font-weight: var(--font-weight-normal);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Force bold fonts */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: var(--font-weight-black);
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+
+/* Scrollbar Styling - BRUTAL */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--neo-cream);
+  border-left: var(--border-light);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--neo-yellow);
+  border: 3px solid var(--neo-black);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--neo-pink);
+}
+
+/* Custom Utilities */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-dark::-webkit-scrollbar-track {
+  background: var(--neo-black);
+}
+
+.scrollbar-dark::-webkit-scrollbar-thumb {
+  background: var(--neo-yellow);
+  border: 3px solid var(--neo-black);
+}
+
+/* ============================================
+   NEO-BRUTALISM UTILITY CLASSES
+   ============================================ */
+
+/* Border Classes */
+.neo-border {
+  border: var(--border-brutal);
+}
+.neo-border-thick {
+  border: var(--border-thick);
+}
+.neo-border-emphasis {
+  border: var(--border-emphasis);
+}
+
+/* Shadow Classes */
+.neo-shadow {
+  box-shadow: var(--shadow-brutal);
+}
+.neo-shadow-sm {
+  box-shadow: var(--shadow-brutal-sm);
+}
+.neo-shadow-md {
+  box-shadow: var(--shadow-brutal-md);
+}
+.neo-shadow-lg {
+  box-shadow: var(--shadow-brutal-lg);
+}
+.neo-shadow-color {
+  box-shadow: var(--shadow-brutal-color);
+}
+
+/* Background Classes */
+.neo-bg-yellow {
+  background: var(--neo-yellow);
+}
+.neo-bg-pink {
+  background: var(--neo-pink);
+}
+.neo-bg-cyan {
+  background: var(--neo-cyan);
+}
+.neo-bg-lime {
+  background: var(--neo-lime);
+}
+.neo-bg-purple {
+  background: var(--neo-purple);
+}
+.neo-bg-black {
+  background: var(--neo-black);
+}
+.neo-bg-white {
+  background: var(--neo-white);
+}
+.neo-bg-cream {
+  background: var(--neo-cream);
+}
+
+/* Animation Keyframes - HARD transitions only */
+@keyframes neo-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes neo-bounce-hard {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes neo-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes neo-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes neo-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes neo-rotate-badge {
+  from {
+    transform: rotate(-3deg);
+  }
+  to {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes typing {
+  0% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
+
+.animate-fadeIn {
+  animation: neo-slide-up 0.15s ease-out;
+}
+
+.animate-slideInUp {
+  animation: neo-slide-up 0.15s ease-out;
+}
+
+.animate-slideInRight {
+  animation: neo-slide-right 0.15s ease-out;
+}
+
+.animate-pulse-slow {
+  animation: neo-pulse 0.5s ease-in-out infinite;
+}
+
+/* Typing Indicator - BRUTAL */
+.typing-dot {
+  width: 12px;
+  height: 12px;
+  background: var(--neo-black);
+  animation: typing 1s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Focus Styles - BRUTAL */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--neo-yellow), var(--shadow-brutal);
+}
+
+.focus-ring-dark:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--neo-pink), var(--shadow-brutal);
+}
+
+/* Skeleton Loading - BRUTAL stripes */
+.skeleton {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--neo-cream),
+    var(--neo-cream) 10px,
+    var(--neo-yellow) 10px,
+    var(--neo-yellow) 20px
+  );
+  border: var(--border-light);
+  animation: neo-skeleton-loading 0.5s linear infinite;
+}
+
+@keyframes neo-skeleton-loading {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 40px 0;
+  }
+}
+
+/* Toast Notifications - BRUTAL */
+.toast-enter {
+  animation: neo-slide-right 0.1s ease-out;
+}
+
+.toast-exit {
+  animation: neo-slide-right 0.1s ease-in reverse;
+}
+
+/* Modal Overlay - BRUTAL checkerboard */
+.modal-overlay {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+/* Drag and Drop Zone - BRUTAL */
+.drop-zone {
+  border: 4px dashed var(--neo-black);
+  background: var(--neo-cream);
+  transition: all var(--transition-fast);
+}
+
+.drop-zone:hover,
+.drop-zone.active {
+  border-style: solid;
+  background: var(--neo-yellow);
+  box-shadow: var(--shadow-brutal);
+}
+
+/* Message Bubbles - BRUTAL */
+.message-user {
+  background: var(--neo-pink);
+  color: var(--neo-white);
+  border: var(--border-brutal);
+  box-shadow: var(--shadow-brutal);
+}
+
+.message-ai {
+  background: var(--neo-white);
+  color: var(--neo-black);
+  border: var(--border-brutal);
+  box-shadow: var(--shadow-brutal);
+}
+
+/* Source Citation Pills - BRUTAL */
+.source-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--neo-cyan);
+  border: 3px solid var(--neo-black);
+  box-shadow: 3px 3px 0px var(--neo-black);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--neo-black);
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all var(--transition-fast);
+}
+
+.source-pill:hover {
+  background: var(--neo-yellow);
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0px var(--neo-black);
+}
+
+.source-pill:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0px 0px 0px var(--neo-black);
+}
+
+/* Mode Selector Cards - BRUTAL */
+.mode-card {
+  border: var(--border-brutal);
+  padding: var(--spacing-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--neo-white);
+  box-shadow: var(--shadow-brutal);
+}
+
+.mode-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-brutal-md);
+}
+
+.mode-card:active {
+  transform: translate(4px, 4px);
+  box-shadow: 2px 2px 0px var(--neo-black);
+}
+
+.mode-card.selected {
+  border-width: 5px;
+}
+
+.mode-card.selected.namespace {
+  background: var(--neo-cyan);
+  border-color: var(--neo-black);
+}
+
+.mode-card.selected.single {
+  background: var(--neo-lime);
+  border-color: var(--neo-black);
+}
+
+.mode-card.selected.multi {
+  background: var(--neo-pink);
+  border-color: var(--neo-black);
+  color: var(--neo-white);
+}
+
+/* Custom Checkbox - BRUTAL */
+.custom-checkbox {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--neo-black);
+  background: var(--neo-white);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.custom-checkbox:checked {
+  background: var(--neo-pink);
+}
+
+.custom-checkbox:checked::after {
+  content: "✓";
+  position: absolute;
+  color: var(--neo-white);
+  font-size: 16px;
+  font-weight: 900;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Custom Radio - BRUTAL */
+.custom-radio {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--neo-black);
+  background: var(--neo-white);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.custom-radio:checked {
+  background: var(--neo-lime);
+}
+
+.custom-radio:checked::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--neo-black);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Slider/Range Input - BRUTAL */
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 12px;
+  background: var(--neo-cream);
+  border: 3px solid var(--neo-black);
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  background: var(--neo-yellow);
+  border: 3px solid var(--neo-black);
+  cursor: pointer;
+  box-shadow: 2px 2px 0px var(--neo-black);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: var(--neo-pink);
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(0.95);
+  box-shadow: 0px 0px 0px var(--neo-black);
+}
+
+/* ============================================
+   NEO-BRUTALISM COMPONENT STYLES
+   ============================================ */
+
+/* BUTTONS */
+.neo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 28px;
+  font-weight: 800;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: var(--border-brutal);
+  box-shadow: var(--shadow-brutal);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: var(--neo-yellow);
+  color: var(--neo-black);
+}
+
+.neo-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow-brutal-md);
+}
+
+.neo-btn:active {
+  transform: translate(4px, 4px);
+  box-shadow: 2px 2px 0px var(--neo-black);
+}
+
+.neo-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--shadow-brutal);
+}
+
+.neo-btn-primary {
+  background: var(--neo-pink);
+  color: var(--neo-white);
+}
+
+.neo-btn-secondary {
+  background: var(--neo-white);
+  color: var(--neo-black);
+}
+
+.neo-btn-danger {
+  background: var(--neo-red);
+  color: var(--neo-white);
+}
+
+.neo-btn-ghost {
+  background: transparent;
+  border: 3px solid var(--neo-black);
+  box-shadow: none;
+}
+
+.neo-btn-ghost:hover {
+  background: var(--neo-yellow);
+  box-shadow: var(--shadow-brutal-sm);
+}
+
+/* CARDS */
+.neo-card {
+  background: var(--neo-white);
+  border: var(--border-brutal);
+  box-shadow: var(--shadow-brutal);
+  padding: var(--spacing-lg);
+}
+
+.neo-card-yellow {
+  background: var(--neo-yellow);
+}
+
+.neo-card-pink {
+  background: var(--neo-pink);
+  color: var(--neo-white);
+}
+
+.neo-card-cyan {
+  background: var(--neo-cyan);
+}
+
+.neo-card-hover:hover {
+  transform: translate(-4px, -4px);
+  box-shadow: var(--shadow-brutal-lg);
+}
+
+/* INPUTS */
+.neo-input {
+  width: 100%;
+  padding: 14px 18px;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--neo-white);
+  border: var(--border-brutal);
+  box-shadow: var(--shadow-brutal-sm);
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.neo-input::placeholder {
+  color: #666;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.neo-input:focus {
+  box-shadow: var(--shadow-brutal);
+  border-color: var(--neo-pink);
+}
+
+/* BADGES */
+.neo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  border: 3px solid var(--neo-black);
+  background: var(--neo-white);
+}
+
+.neo-badge-yellow {
+  background: var(--neo-yellow);
+}
+.neo-badge-pink {
+  background: var(--neo-pink);
+  color: var(--neo-white);
+}
+.neo-badge-cyan {
+  background: var(--neo-cyan);
+}
+.neo-badge-lime {
+  background: var(--neo-lime);
+}
+.neo-badge-success {
+  background: var(--neo-lime);
+}
+.neo-badge-error {
+  background: var(--neo-red);
+  color: var(--neo-white);
+}
+.neo-badge-warning {
+  background: var(--neo-orange);
+  color: var(--neo-white);
+}
+
+/* TABLE STYLES */
+.neo-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: var(--border-brutal);
+}
+
+.neo-table th {
+  background: var(--neo-black);
+  color: var(--neo-yellow);
+  padding: 16px;
+  text-align: left;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  border: 3px solid var(--neo-black);
+}
+
+.neo-table td {
+  padding: 16px;
+  border: 3px solid var(--neo-black);
+  font-weight: 600;
+  background: var(--neo-white);
+}
+
+.neo-table tr:nth-child(even) td {
+  background: var(--neo-cream);
+}
+
+.neo-table tr:hover td {
+  background: var(--neo-yellow);
+}
+
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+  .mobile-hidden {
+    display: none !important;
+  }
+
+  :root {
+    --shadow-brutal: 4px 4px 0px var(--neo-black);
+    --shadow-brutal-md: 6px 6px 0px var(--neo-black);
+    --shadow-brutal-lg: 8px 8px 0px var(--neo-black);
+  }
+}
+
+@media (min-width: 769px) {
+  .desktop-hidden {
+    display: none !important;
+  }
+}
+
+/* ============================================
+   RANGE INPUT (SLIDER) - NEO-BRUTALISM
+   ============================================ */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Webkit (Chrome, Safari, Edge) */
+input[type="range"]::-webkit-slider-track {
+  background: var(--neo-white);
+  border: 4px solid var(--neo-black);
+  height: 12px;
+  box-shadow: 2px 2px 0px var(--neo-black);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--neo-black);
+  border: 3px solid var(--neo-black);
+  height: 24px;
+  width: 24px;
+  margin-top: -10px;
+  box-shadow: 2px 2px 0px var(--neo-pink);
+  transition: all 0.1s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: var(--neo-pink);
+  box-shadow: 3px 3px 0px var(--neo-black);
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  box-shadow: 1px 1px 0px var(--neo-black);
+}
+
+/* Firefox */
+input[type="range"]::-moz-range-track {
+  background: var(--neo-white);
+  border: 4px solid var(--neo-black);
+  height: 12px;
+  box-shadow: 2px 2px 0px var(--neo-black);
+}
+
+input[type="range"]::-moz-range-thumb {
+  background: var(--neo-black);
+  border: 3px solid var(--neo-black);
+  height: 24px;
+  width: 24px;
+  border-radius: 0;
+  box-shadow: 2px 2px 0px var(--neo-pink);
+  transition: all 0.1s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background: var(--neo-pink);
+  box-shadow: 3px 3px 0px var(--neo-black);
+}
+
+input[type="range"]::-moz-range-thumb:active {
+  box-shadow: 1px 1px 0px var(--neo-black);
+}
