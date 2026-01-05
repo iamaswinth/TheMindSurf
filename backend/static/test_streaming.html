@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Streaming RAG Test Interface</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        min-height: 100vh;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        padding: 30px;
+      }
+
+      h1 {
+        color: #667eea;
+        margin-bottom: 30px;
+        font-size: 28px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 80px;
+        font-family: inherit;
+      }
+
+      .inline-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 15px;
+      }
+
+      button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 14px 32px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        width: 100%;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .status-bar {
+        background: #f5f5f5;
+        padding: 12px;
+        border-radius: 8px;
+        margin: 20px 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+      }
+
+      .status-badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .status-badge.idle {
+        background: #e0e0e0;
+        color: #666;
+      }
+      .status-badge.searching {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .status-badge.generating {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+      .status-badge.complete {
+        background: #d4edda;
+        color: #155724;
+      }
+      .status-badge.error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
+        display: none;
+      }
+
+      .spinner.active {
+        display: block;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .results-container {
+        margin-top: 30px;
+      }
+
+      .section {
+        margin-bottom: 25px;
+      }
+
+      .section h3 {
+        color: #333;
+        margin-bottom: 15px;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .sources-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .source-card {
+        background: #f8f9fa;
+        border-left: 4px solid #667eea;
+        padding: 15px;
+        border-radius: 8px;
+      }
+
+      .source-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .score {
+        background: #667eea;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .source-preview {
+        font-size: 14px;
+        color: #555;
+        line-height: 1.5;
+      }
+
+      .answer-box {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        border: 2px solid #e0e0e0;
+        font-size: 15px;
+        line-height: 1.8;
+        color: #333;
+        min-height: 100px;
+      }
+
+      .answer-box.streaming {
+        border-color: #667eea;
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          border-color: #667eea;
+        }
+        50% {
+          border-color: #764ba2;
+        }
+      }
+
+      .metadata {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+      }
+
+      .metric {
+        background: white;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
+      }
+
+      .metric-label {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 4px;
+      }
+
+      .metric-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #667eea;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>
+        <span>🚀</span>
+        Streaming RAG Test Interface
+      </h1>
+
+      <div class="form-group">
+        <label for="question">Question</label>
+        <textarea
+          id="question"
+          placeholder="Ask a question about your documents..."
+        >
+What are the main findings in the research paper?</textarea
+        >
+      </div>
+
+      <div class="inline-group">
+        <div class="form-group">
+          <label for="namespace">Namespace</label>
+          <input
+            type="text"
+            id="namespace"
+            value="documents"
+            placeholder="documents"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="topK">Top K Results</label>
+          <input type="number" id="topK" value="5" min="1" max="20" />
+        </div>
+
+        <div class="form-group">
+          <label for="temperature">Temperature</label>
+          <input
+            type="number"
+            id="temperature"
+            value="0.3"
+            min="0"
+            max="2"
+            step="0.1"
+          />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="documentIds"
+          >Document IDs (optional, comma-separated)</label
+        >
+        <input type="text" id="documentIds" placeholder="doc-123, doc-456" />
+      </div>
+
+      <button id="askButton" onclick="streamRAG()">Ask Question</button>
+
+      <div class="status-bar">
+        <div class="spinner" id="spinner"></div>
+        <div class="status-badge idle" id="statusBadge">Idle</div>
+        <div id="statusMessage">Ready to process your question</div>
+      </div>
+
+      <div class="results-container" id="resultsContainer">
+        <div class="empty-state">
+          👆 Enter a question above and click "Ask Question" to see streaming
+          results
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let currentAnswer = "";
+      let sources = [];
+      let metadata = {};
+
+      function setStatus(status, message) {
+        const badge = document.getElementById("statusBadge");
+        const spinner = document.getElementById("spinner");
+        const statusMsg = document.getElementById("statusMessage");
+
+        badge.className = `status-badge ${status}`;
+        badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        statusMsg.textContent = message;
+
+        if (status === "searching" || status === "generating") {
+          spinner.classList.add("active");
+        } else {
+          spinner.classList.remove("active");
+        }
+      }
+
+      function updateResults() {
+        const container = document.getElementById("resultsContainer");
+
+        let html = "";
+
+        // Sources section
+        if (sources.length > 0) {
+          html += `
+                    <div class="section">
+                        <h3>📚 Sources (${sources.length})</h3>
+                        <div class="sources-grid">
+                `;
+
+          sources.forEach((source) => {
+            html += `
+                        <div class="source-card">
+                            <div class="source-header">
+                                <div class="source-preview">${source.id}</div>
+                                <span class="score">${(
+                                  source.score * 100
+                                ).toFixed(1)}%</span>
+                            </div>
+                            <div class="source-preview">${source.preview}</div>
+                        </div>
+                    `;
+          });
+
+          html += `
+                        </div>
+                    </div>
+                `;
+        }
+
+        // Answer section
+        if (currentAnswer) {
+          const isStreaming = document
+            .getElementById("statusBadge")
+            .classList.contains("generating");
+          html += `
+                    <div class="section">
+                        <h3>💡 Answer</h3>
+                        <div class="answer-box ${
+                          isStreaming ? "streaming" : ""
+                        }">
+                            ${currentAnswer}${
+            isStreaming
+              ? '<span style="animation: blink 1s infinite;">▊</span>'
+              : ""
+          }
+                        </div>
+                    </div>
+                `;
+        }
+
+        // Metadata section
+        if (metadata.total_tokens) {
+          html += `
+                    <div class="section">
+                        <h3>📊 Performance Metrics</h3>
+                        <div class="metadata">
+                            <div class="metric">
+                                <div class="metric-label">Total Tokens</div>
+                                <div class="metric-value">${metadata.total_tokens}</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Search Time</div>
+                                <div class="metric-value">${metadata.search_time_ms}ms</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Generation Time</div>
+                                <div class="metric-value">${metadata.generation_time_ms}ms</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Total Time</div>
+                                <div class="metric-value">${metadata.total_time_ms}ms</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+        }
+
+        container.innerHTML = html;
+      }
+
+      async function streamRAG() {
+        const button = document.getElementById("askButton");
+        const question = document.getElementById("question").value.trim();
+        const namespace = document.getElementById("namespace").value.trim();
+        const topK = parseInt(document.getElementById("topK").value);
+        const temperature = parseFloat(
+          document.getElementById("temperature").value
+        );
+        const documentIdsInput = document
+          .getElementById("documentIds")
+          .value.trim();
+
+        if (!question || !namespace) {
+          alert("Please enter both a question and namespace");
+          return;
+        }
+
+        // Reset state
+        currentAnswer = "";
+        sources = [];
+        metadata = {};
+        button.disabled = true;
+        setStatus("searching", "Starting search...");
+
+        // Prepare request
+        const payload = {
+          question,
+          namespace,
+          top_k: topK,
+          temperature,
+          max_tokens: 2000,
+        };
+
+        if (documentIdsInput) {
+          payload.document_ids = documentIdsInput
+            .split(",")
+            .map((id) => id.trim());
+        }
+
+        try {
+          const response = await fetch("/api/v1/search/rag-stream", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "text/event-stream",
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let currentEvent = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split("\n");
+
+            for (const line of lines) {
+              if (line.startsWith("event: ")) {
+                currentEvent = line.slice(7).trim();
+              } else if (line.startsWith("data: ")) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+
+                  switch (currentEvent) {
+                    case "status":
+                      if (data.stage === "generating") {
+                        setStatus("generating", "Generating answer...");
+                      } else {
+                        setStatus("searching", data.message);
+                      }
+                      break;
+
+                    case "sources":
+                      sources = data.sources;
+                      setStatus(
+                        "generating",
+                        `Found ${
+                          data.count
+                        } sources in ${data.search_time_ms.toFixed(0)}ms`
+                      );
+                      updateResults();
+                      break;
+
+                    case "token":
+                      currentAnswer += data.token;
+                      updateResults();
+                      break;
+
+                    case "done":
+                      metadata = {
+                        total_tokens: data.total_tokens,
+                        search_time_ms: data.timing.search_time_ms.toFixed(0),
+                        generation_time_ms:
+                          data.timing.generation_time_ms.toFixed(0),
+                        total_time_ms: data.timing.total_time_ms.toFixed(0),
+                      };
+                      setStatus(
+                        "complete",
+                        `Completed in ${metadata.total_time_ms}ms`
+                      );
+                      updateResults();
+                      break;
+
+                    case "error":
+                      setStatus("error", data.message);
+                      alert(`Error: ${data.message}`);
+                      break;
+                  }
+                } catch (e) {
+                  console.error("Parse error:", e);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          setStatus("error", error.message);
+          alert(`Error: ${error.message}`);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      // Allow Enter key to submit (with Shift+Enter for newline)
+      document.getElementById("question").addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          streamRAG();
+        }
+      });
+    </script>
+  </body>
+</html>

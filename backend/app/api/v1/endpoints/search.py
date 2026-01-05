@@ -7,6 +7,7 @@ using Pinecone vector database with integrated inference.
 Endpoints:
 - POST /search/hybrid: Hybrid search using dense + sparse indexes
 - POST /search/rag: Full RAG pipeline (search + generate)
+- POST /search/rag-stream: Streaming RAG pipeline with SSE
 - GET /search/status: Pinecone connection and index status
 - POST /search/upsert: Upsert chunks to Pinecone
 - DELETE /search/document: Delete a document from indexes
@@ -15,10 +16,11 @@ Endpoints:
 
 import logging
 import time
-from typing import Optional
+import asyncio
+from typing import Optional, AsyncGenerator
 
-from fastapi import APIRouter, HTTPException, Query, status, Body
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, Query, status, Body, Request
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.models.schemas import (
     SearchRequest,
@@ -34,6 +36,7 @@ from app.models.schemas import (
     DeleteDocumentRequest,
     DeleteNamespaceRequest,
     ErrorDetail,
+    RAGStreamRequest,
 )
 from app.services.pinecone_service import (
     PineconeService,
@@ -47,6 +50,11 @@ from app.services.generation_service import (
     GenerationService,
     GenerationServiceError,
     get_generation_service,
+)
+from app.services.streaming_service import (
+    StreamingRAGService,
+    SSEFormatter,
+    get_streaming_service,
 )
 from app.core.config import settings
 
@@ -329,6 +337,168 @@ async def rag_query(request: RAGRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"code": "RAG_ERROR", "message": f"RAG query failed: {str(e)}"}
         )
+
+
+# =============================================================================
+# Streaming RAG Endpoint
+# =============================================================================
+
+@router.post(
+    "/rag-stream",
+    summary="Streaming RAG pipeline with Server-Sent Events",
+    response_class=StreamingResponse,
+    responses={
+        200: {
+            "description": "Server-Sent Events stream",
+            "content": {
+                "text/event-stream": {
+                    "example": "event: status\ndata: {\"request_id\": \"abc123\", \"message\": \"Processing request\"}\n\n"
+                }
+            }
+        },
+        503: {"description": "Service not configured"},
+    }
+)
+async def rag_stream(request: RAGStreamRequest, http_request: Request):
+    """
+    Execute streaming RAG pipeline: hybrid search + streaming answer generation.
+    
+    This endpoint uses Server-Sent Events (SSE) to stream results progressively:
+    
+    **Event Types:**
+    
+    1. **status**: Processing status updates
+       - `{"request_id": "...", "message": "...", "stage": "started|generating", "timestamp": "..."}`
+    
+    2. **sources**: Retrieved document sources (sent immediately after search)
+       - `{"request_id": "...", "sources": [...], "count": N, "search_time_ms": ...}`
+    
+    3. **answer_start**: Signals generation is beginning
+       - `{"request_id": "...", "model": "gpt-4o", "timestamp": "..."}`
+    
+    4. **token**: Individual tokens as they're generated
+       - `{"request_id": "...", "token": "...", "index": N}`
+    
+    5. **done**: Final metadata when generation completes
+       - `{"request_id": "...", "total_tokens": N, "timing": {...}, "model_used": "..."}`
+    
+    6. **error**: Error information if something fails
+       - `{"request_id": "...", "error_type": "...", "message": "...", "recoverable": bool}`
+    
+    **Request Body:**
+    - question: Question to answer (required)
+    - namespace: Namespace to search (required)
+    - document_id: Single document ID filter (optional)
+    - document_ids: Multiple document IDs filter (optional)
+    - top_k: Number of results to retrieve (default: 5)
+    - temperature: Sampling temperature (default: 0.3)
+    - max_tokens: Maximum response tokens (default: 2000)
+    - system_message: Custom system message for LLM (optional)
+    
+    **Example curl command:**
+    ```bash
+    curl -X POST "http://localhost:8000/api/v1/search/rag-stream" \\
+         -H "Content-Type: application/json" \\
+         -H "Accept: text/event-stream" \\
+         -d '{"question": "What is machine learning?", "namespace": "documents"}' \\
+         --no-buffer
+    ```
+    """
+    if not settings.is_pinecone_available:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "PINECONE_NOT_CONFIGURED",
+                "message": "Pinecone is not configured"
+            }
+        )
+    
+    if not settings.is_ai_available:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "AI_NOT_CONFIGURED",
+                "message": "OpenAI is not configured for answer generation"
+            }
+        )
+    
+    logger.info(f"Streaming RAG request: question='{request.question[:50]}...'")
+    
+    async def generate_sse_stream() -> AsyncGenerator[str, None]:
+        """Generate SSE events for the RAG stream."""
+        import uuid
+        request_id = str(uuid.uuid4())[:8]
+        
+        try:
+            # Get services
+            pinecone_service = get_pinecone_service()
+            streaming_service = get_streaming_service()
+            
+            # Determine document filter
+            document_ids = None
+            if request.document_id:
+                document_ids = [request.document_id]
+            elif request.document_ids:
+                document_ids = request.document_ids
+            
+            # 1. Perform hybrid search
+            search_start = time.time()
+            try:
+                search_result = pinecone_service.hybrid_search(
+                    query=request.question,
+                    top_k=request.top_k,
+                    namespace=request.namespace,
+                    include_metadata=True,
+                    document_ids=document_ids
+                )
+            except PineconeSearchError as e:
+                logger.error(f"Search error in stream: {e}")
+                yield SSEFormatter.format_error(
+                    request_id=request_id,
+                    error_type="SEARCH_ERROR",
+                    message=f"Failed to search documents: {str(e)}",
+                    recoverable=False
+                )
+                return
+            
+            search_time_ms = (time.time() - search_start) * 1000
+            
+            # 2. Stream the RAG response
+            async for event in streaming_service.stream_rag_response(
+                question=request.question,
+                search_results=search_result["results"],
+                search_time_ms=search_time_ms,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature,
+                system_message=request.system_message
+            ):
+                # Check if client disconnected
+                if await http_request.is_disconnected():
+                    logger.info(f"Client disconnected. Request ID: {request_id}")
+                    return
+                
+                yield event
+                
+        except Exception as e:
+            logger.error(f"Stream error: {e}", exc_info=True)
+            yield SSEFormatter.format_error(
+                request_id=request_id,
+                error_type="STREAM_ERROR",
+                message=f"Unexpected error: {str(e)}",
+                recoverable=False
+            )
+    
+    return StreamingResponse(
+        generate_sse_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Content-Type, Accept",
+        }
+    )
 
 
 # =============================================================================

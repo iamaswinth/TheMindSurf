@@ -23,6 +23,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -162,6 +164,25 @@ Upload a PDF to `/api/v1/documents/process-multimodal` to receive processed chun
     app.include_router(api_router, prefix="/api/v1")
     
     # =========================================================================
+    # Static Files & Test Interface
+    # =========================================================================
+    
+    # Mount static files directory
+    try:
+        app.mount("/static", StaticFiles(directory="static"), name="static")
+    except Exception as e:
+        logger.warning(f"Could not mount static files: {e}")
+    
+    @app.get("/test-streaming", tags=["testing"])
+    async def test_streaming_interface():
+        """
+        Interactive test interface for the streaming RAG endpoint.
+        
+        Opens a browser-based UI to test SSE streaming with real-time display.
+        """
+        return FileResponse("static/test_streaming.html")
+    
+    # =========================================================================
     # Root Endpoint
     # =========================================================================
     
@@ -172,6 +193,7 @@ Upload a PDF to `/api/v1/documents/process-multimodal` to receive processed chun
             "name": settings.APP_NAME,
             "version": settings.APP_VERSION,
             "docs": "/docs",
+            "test_streaming": "/test-streaming",
             "health": "/api/v1/documents/health",
             "process": "/api/v1/documents/process-multimodal",
         }

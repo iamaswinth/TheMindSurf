@@ -1,3 +1,4 @@
+
 """
 Pinecone Vector Database Service
 
@@ -176,7 +177,7 @@ class PineconeService:
         while time.time() - start_time < timeout:
             try:
                 index_desc = self.pc.describe_index(index_name)
-                if index_desc.status.ready:
+                if index_desc.status and index_desc.status.ready:
                     logger.info(f"Index {index_name} is ready")
                     return
                 logger.debug(f"Index {index_name} not ready yet, waiting...")

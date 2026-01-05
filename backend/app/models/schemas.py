@@ -769,3 +769,121 @@ class ChatResponse(BaseModel):
     response: str = Field(..., description="Generated answer")
     sources: list[ChatSource] = Field(default_factory=list, description="Source documents")
     metadata: ChatMetadata = Field(..., description="Response metadata")
+
+
+# =============================================================================
+# Streaming RAG Schemas
+# =============================================================================
+
+class RAGStreamRequest(BaseModel):
+    """Request schema for streaming RAG endpoint."""
+    
+    question: str = Field(..., min_length=1, description="Question to answer")
+    namespace: str = Field(..., min_length=1, description="Namespace to search")
+    document_id: Optional[str] = Field(
+        default=None,
+        description="Single document ID filter (optional)"
+    )
+    document_ids: Optional[list[str]] = Field(
+        default=None,
+        description="Multiple document IDs filter (optional)"
+    )
+    top_k: int = Field(
+        default=5,
+        ge=1,
+        le=100,
+        description="Number of search results to retrieve"
+    )
+    temperature: float = Field(
+        default=0.3,
+        ge=0,
+        le=2,
+        description="Sampling temperature for generation"
+    )
+    max_tokens: int = Field(
+        default=2000,
+        ge=100,
+        le=4000,
+        description="Maximum tokens in response"
+    )
+    system_message: Optional[str] = Field(
+        default=None,
+        description="Custom system message for the LLM"
+    )
+
+
+class SSESourceInfo(BaseModel):
+    """Source information in SSE stream."""
+    
+    id: str = Field(..., description="Source record ID")
+    score: float = Field(..., description="Relevance score")
+    preview: str = Field(..., description="Text preview")
+    page_numbers: Optional[list[str]] = Field(default=None, description="Page numbers")
+    metadata: Optional[dict] = Field(default=None, description="Additional metadata")
+
+
+class SSETimingInfo(BaseModel):
+    """Timing information in SSE done event."""
+    
+    search_time_ms: float = Field(..., description="Search time in milliseconds")
+    generation_time_ms: float = Field(..., description="Generation time in milliseconds")
+    total_time_ms: float = Field(..., description="Total time in milliseconds")
+
+
+class SSEStatusEvent(BaseModel):
+    """Status event payload."""
+    
+    request_id: str = Field(..., description="Unique request identifier")
+    message: str = Field(..., description="Status message")
+    stage: str = Field(..., description="Processing stage")
+    timestamp: str = Field(..., description="ISO timestamp")
+
+
+class SSESourcesEvent(BaseModel):
+    """Sources event payload."""
+    
+    request_id: str = Field(..., description="Unique request identifier")
+    sources: list[SSESourceInfo] = Field(..., description="Retrieved sources")
+    count: int = Field(..., description="Number of sources")
+    search_time_ms: float = Field(..., description="Search time in ms")
+    timestamp: str = Field(..., description="ISO timestamp")
+
+
+class SSEAnswerStartEvent(BaseModel):
+    """Answer start event payload."""
+    
+    request_id: str = Field(..., description="Unique request identifier")
+    model: str = Field(..., description="Model being used")
+    timestamp: str = Field(..., description="ISO timestamp")
+    estimated_time_ms: Optional[float] = Field(default=None, description="Estimated generation time")
+
+
+class SSETokenEvent(BaseModel):
+    """Token event payload."""
+    
+    request_id: str = Field(..., description="Unique request identifier")
+    token: str = Field(..., description="Generated token text")
+    index: int = Field(..., description="Token index in sequence")
+
+
+class SSEDoneEvent(BaseModel):
+    """Done event payload."""
+    
+    request_id: str = Field(..., description="Unique request identifier")
+    total_tokens: int = Field(..., description="Total tokens generated")
+    timing: SSETimingInfo = Field(..., description="Timing breakdown")
+    model_used: str = Field(..., description="Model used for generation")
+    cached: bool = Field(default=False, description="Whether result was cached")
+    warnings: list[str] = Field(default_factory=list, description="Any warnings")
+    timestamp: str = Field(..., description="ISO timestamp")
+
+
+class SSEErrorEvent(BaseModel):
+    """Error event payload."""
+    
+    request_id: str = Field(..., description="Unique request identifier")
+    error_type: str = Field(..., description="Error type code")
+    message: str = Field(..., description="Human-readable error message")
+    details: dict = Field(default_factory=dict, description="Additional error details")
+    recoverable: bool = Field(default=True, description="Whether error is recoverable")
+    timestamp: str = Field(..., description="ISO timestamp")

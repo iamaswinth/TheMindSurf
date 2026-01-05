@@ -3,12 +3,14 @@ RAG Generation Service
 
 This module provides the generation component for the RAG pipeline,
 using OpenAI's GPT-4o model to generate answers based on retrieved context.
+
+Supports both synchronous (complete response) and asynchronous (streaming) modes.
 """
 
 import logging
-from typing import Optional
+from typing import Optional, AsyncGenerator
 
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 
 from app.core.config import settings
 
@@ -26,7 +28,8 @@ class GenerationService:
     Service for generating answers using OpenAI models.
     
     Integrates with the RAG pipeline to generate contextual answers
-    based on retrieved document chunks.
+    based on retrieved document chunks. Supports both synchronous
+    and streaming response generation.
     """
     
     def __init__(
@@ -49,7 +52,12 @@ class GenerationService:
                 "OpenAI API key not configured. Set OPENAI_API_KEY environment variable."
             )
         
+        # Synchronous client for non-streaming requests
         self.client = OpenAI(api_key=self.api_key)
+        
+        # Async client for streaming requests
+        self.async_client = AsyncOpenAI(api_key=self.api_key)
+        
         logger.info(f"Generation service initialized with model: {self.model}")
     
     def generate_answer(
@@ -175,6 +183,66 @@ class GenerationService:
             "sources": sources,
             "model_used": self.model
         }
+    
+    async def generate_answer_streaming(
+        self,
+        prompt: str,
+        max_tokens: Optional[int] = None,
+        temperature: Optional[float] = None,
+        system_message: Optional[str] = None
+    ) -> AsyncGenerator[str, None]:
+        """
+        Generate an answer using streaming from OpenAI.
+        
+        Args:
+            prompt: The augmented prompt with search results
+            max_tokens: Maximum tokens in response (defaults to settings)
+            temperature: Sampling temperature (defaults to settings)
+            system_message: Optional system message for the model
+        
+        Yields:
+            Token strings as they are generated
+        
+        Raises:
+            GenerationServiceError: If generation fails
+        """
+        max_tokens = max_tokens or settings.OPENAI_MAX_TOKENS
+        temperature = temperature if temperature is not None else settings.OPENAI_TEMPERATURE
+        
+        messages = []
+        
+        if system_message:
+            messages.append({
+                "role": "system",
+                "content": system_message
+            })
+        
+        messages.append({
+            "role": "user",
+            "content": prompt
+        })
+        
+        try:
+            logger.debug(f"Starting streaming generation with {self.model}...")
+            
+            stream = await self.async_client.chat.completions.create(
+                model=self.model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                messages=messages,
+                stream=True
+            )
+            
+            async for chunk in stream:
+                if chunk.choices and len(chunk.choices) > 0:
+                    delta = chunk.choices[0].delta
+                    if delta.content:
+                        yield delta.content
+                        
+        except Exception as e:
+            error_msg = f"Failed to stream answer: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            raise GenerationServiceError(error_msg) from e
 
 
 def get_generation_service() -> GenerationService:
