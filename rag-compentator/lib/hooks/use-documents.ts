@@ -14,14 +14,28 @@ export const documentKeys = {
 };
 
 // ============================================
-// GET DOCUMENTS
+// GET DOCUMENTS (from NeonDB via Next.js API)
 // ============================================
 export function useDocuments(namespaceId?: string) {
   return useQuery({
     queryKey: documentKeys.list(namespaceId),
-    queryFn: () => apiClient.getDocuments(namespaceId),
+    queryFn: async () => {
+      // Use NeonDB API route for fast listing
+      const url = namespaceId
+        ? `/api/neon/documents?namespace=${encodeURIComponent(namespaceId)}`
+        : "/api/neon/documents";
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch documents from NeonDB");
+      }
+
+      return response.json() as Promise<Document[]>;
+    },
     staleTime: 30 * 1000,
-    enabled: !!namespaceId, // Only fetch if namespace is provided
+    // Enable always, not just when namespace is provided
+    // This allows listing all documents
   });
 }
 

@@ -50,13 +50,14 @@ async def lifespan(app: FastAPI):
     Application lifespan manager.
     
     Handles startup and shutdown events:
-    - Startup: Log configuration, validate settings
-    - Shutdown: Cleanup resources
+    - Startup: Log configuration, validate settings, connect to database
+    - Shutdown: Cleanup resources, close database connections
     """
     # Startup
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"Debug mode: {settings.DEBUG}")
     logger.info(f"AI enhancement available: {settings.is_ai_available}")
+    logger.info(f"Database available: {settings.is_database_available}")
     
     if not settings.is_ai_available:
         logger.warning(
@@ -64,10 +65,36 @@ async def lifespan(app: FastAPI):
             "Set OPENAI_API_KEY in .env to enable AI features."
         )
     
+    # Initialize database connection
+    if settings.is_database_available:
+        try:
+            from app.db.connection import db
+            from app.db.schema import INIT_SCHEMA
+            
+            await db.connect()
+            logger.info("Initializing database schema...")
+            
+            # Create tables if they don't exist
+            for statement in INIT_SCHEMA:
+                await db.execute(statement)
+            
+            logger.info("Database schema initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize database: {e}", exc_info=True)
+            logger.warning("Continuing without database support")
+    
     yield
     
     # Shutdown
     logger.info("Shutting down application...")
+    
+    # Close database connections
+    if settings.is_database_available:
+        try:
+            from app.db.connection import db
+            await db.disconnect()
+        except Exception as e:
+            logger.error(f"Error closing database: {e}")
 
 
 # =============================================================================

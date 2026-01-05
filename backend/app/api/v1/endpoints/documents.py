@@ -6,6 +6,9 @@ processing. It integrates all services to create a complete document
 processing pipeline.
 
 Endpoints:
+- GET /documents: List all documents
+- GET /documents/{id}: Get document details
+- DELETE /documents/{id}: Delete a document
 - POST /documents/process-multimodal: Full multimodal PDF processing
 - GET /documents/health: Health check with AI status
 
@@ -20,6 +23,7 @@ The multimodal endpoint provides:
 import logging
 import time
 from typing import Optional
+import uuid as uuid_module
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query, status
 from fastapi.responses import JSONResponse
@@ -29,10 +33,16 @@ from app.models.schemas import (
     MultimodalChunk,
     ProcessingStats,
     ProcessingStrategy,
+    ContentType,
     HealthCheckResponse,
     ErrorResponse,
     ErrorDetail,
     UpsertResponse,
+    DocumentResponse,
+    DocumentDetailResponse,
+    DocumentListResponse,
+    DocumentDeleteResponse,
+    DocumentMetadata,
 )
 from app.services.multimodal_processor import (
     MultimodalProcessor,
@@ -85,6 +95,327 @@ async def health_check() -> HealthCheckResponse:
         version=settings.APP_VERSION,
         ai_available=settings.is_ai_available,
     )
+
+
+# =============================================================================
+# Document CRUD Endpoints
+# =============================================================================
+
+def _format_file_size(size_bytes: int) -> str:
+    """Format file size in human-readable format."""
+    if size_bytes == 0:
+        return "0 B"
+    
+    units = ["B", "KB", "MB", "GB", "TB"]
+    unit_index = 0
+    size = float(size_bytes)
+    
+    while size >= 1024 and unit_index < len(units) - 1:
+        size /= 1024
+        unit_index += 1
+    
+    return f"{size:.1f} {units[unit_index]}"
+
+
+def _format_document_response(doc: dict, namespace_name: Optional[str] = None) -> DocumentResponse:
+    """Format a document database record to response schema."""
+    return DocumentResponse(
+        id=str(doc["id"]),
+        name=doc.get("original_filename") or doc.get("filename", "unknown"),
+        page_count=doc.get("page_count"),
+        file_size=_format_file_size(doc.get("file_size_bytes", 0)),
+        file_size_bytes=doc.get("file_size_bytes", 0),
+        uploaded_at=doc["uploaded_at"],
+        namespace=doc.get("pinecone_dense_namespace"),
+        namespace_name=namespace_name or doc.get("namespace_name"),
+        metadata=DocumentMetadata(
+            processing_strategy=doc.get("processing_strategy"),
+            chunk_count=doc.get("chunk_count", 0),
+            has_images=bool(doc.get("total_chunks_with_images", 0)),
+            has_tables=bool(doc.get("total_chunks_with_tables", 0)),
+        )
+    )
+
+
+@router.get(
+    "",
+    response_model=DocumentListResponse,
+    summary="List all documents"
+)
+async def list_documents(
+    namespace_id: Optional[str] = Query(
+        default=None,
+        description="Filter by namespace ID"
+    ),
+    namespace: Optional[str] = Query(
+        default=None,
+        description="Filter by namespace name (Pinecone namespace)"
+    ),
+    page: int = Query(default=1, ge=1, description="Page number"),
+    limit: int = Query(default=10, ge=1, le=100, description="Results per page"),
+):
+    """
+    List all documents from NeonDB.
+    
+    Supports filtering by namespace and pagination.
+    """
+    if not settings.is_database_available:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "DATABASE_NOT_CONFIGURED",
+                "message": "Database is not configured"
+            }
+        )
+    
+    try:
+        from app.db.repository import DocumentRepository
+        
+        offset = (page - 1) * limit
+        
+        # If namespace_id is provided, get documents for that namespace
+        if namespace_id:
+            try:
+                ns_uuid = uuid_module.UUID(namespace_id)
+            except ValueError:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "INVALID_NAMESPACE_ID",
+                        "message": "Invalid namespace ID format"
+                    }
+                )
+            
+            # Get namespace info for name
+            ns_info = await DocumentRepository.get_namespace_by_id(ns_uuid)
+            namespace_name = ns_info["name"] if ns_info else None
+            
+            documents = await DocumentRepository.get_documents_by_namespace_id(ns_uuid, limit=limit)
+            # Apply offset manually for now
+            documents = documents[offset:offset + limit] if offset < len(documents) else []
+            total = len(await DocumentRepository.get_documents_by_namespace_id(ns_uuid, limit=10000))
+        else:
+            # List all documents with optional namespace filter
+            documents = await DocumentRepository.list_documents(
+                namespace=namespace,
+                limit=limit,
+                offset=offset
+            )
+            total = await DocumentRepository.get_document_count()
+        
+        formatted_docs = [
+            _format_document_response(doc, namespace_name if namespace_id else None)
+            for doc in documents
+        ]
+        
+        return DocumentListResponse(
+            documents=formatted_docs,
+            total=total,
+            page=page,
+            limit=limit
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to list documents: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "LIST_DOCUMENTS_ERROR",
+                "message": f"Failed to list documents: {str(e)}"
+            }
+        )
+
+
+@router.get(
+    "/{document_id}",
+    response_model=DocumentDetailResponse,
+    summary="Get document details"
+)
+async def get_document(document_id: str):
+    """
+    Get detailed information about a specific document.
+    
+    Returns document metadata and processing statistics.
+    """
+    if not settings.is_database_available:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "DATABASE_NOT_CONFIGURED",
+                "message": "Database is not configured"
+            }
+        )
+    
+    try:
+        from app.db.repository import DocumentRepository
+        
+        # Validate UUID
+        try:
+            doc_uuid = uuid_module.UUID(document_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_DOCUMENT_ID",
+                    "message": "Invalid document ID format"
+                }
+            )
+        
+        document = await DocumentRepository.get_document_by_id(doc_uuid)
+        
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document {document_id} not found"
+                }
+            )
+        
+        # Get namespace info
+        namespace = await DocumentRepository.get_namespace_for_document(doc_uuid)
+        namespace_name = namespace["name"] if namespace else None
+        
+        return DocumentDetailResponse(
+            id=str(document["id"]),
+            name=document.get("original_filename") or document.get("filename", "unknown"),
+            page_count=document.get("page_count"),
+            file_size=_format_file_size(document.get("file_size_bytes", 0)),
+            file_size_bytes=document.get("file_size_bytes", 0),
+            uploaded_at=document["uploaded_at"],
+            namespace=document.get("pinecone_dense_namespace"),
+            namespace_name=namespace_name,
+            metadata=DocumentMetadata(
+                processing_strategy=document.get("processing_strategy"),
+                chunk_count=document.get("chunk_count", 0),
+                has_images=bool(document.get("total_chunks_with_images", 0)),
+                has_tables=bool(document.get("total_chunks_with_tables", 0)),
+            ),
+            processing_stats={
+                "total_chunks": document.get("chunk_count", 0),
+                "ai_enhanced_chunks": document.get("chunk_count", 0) if document.get("ai_enhancement_enabled") else 0,
+                "total_tables": document.get("total_chunks_with_tables", 0),
+                "total_images": document.get("total_chunks_with_images", 0),
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get document {document_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "GET_DOCUMENT_ERROR",
+                "message": f"Failed to get document: {str(e)}"
+            }
+        )
+
+
+@router.delete(
+    "/{document_id}",
+    response_model=DocumentDeleteResponse,
+    summary="Delete a document"
+)
+async def delete_document(document_id: str):
+    """
+    Delete a document from both NeonDB and Pinecone.
+    
+    This operation:
+    1. Gets document info from NeonDB
+    2. Deletes all vectors from Pinecone for this document
+    3. Deletes the document record from NeonDB
+    """
+    if not settings.is_database_available:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "DATABASE_NOT_CONFIGURED",
+                "message": "Database is not configured"
+            }
+        )
+    
+    try:
+        from app.db.repository import DocumentRepository
+        
+        # Validate UUID
+        try:
+            doc_uuid = uuid_module.UUID(document_id)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_DOCUMENT_ID",
+                    "message": "Invalid document ID format"
+                }
+            )
+        
+        # Get document info
+        document = await DocumentRepository.get_document_by_id(doc_uuid)
+        
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document {document_id} not found"
+                }
+            )
+        
+        chunk_count = document.get("chunk_count", 0)
+        pinecone_namespace = document.get("pinecone_dense_namespace")
+        
+        # Delete from Pinecone
+        vectors_deleted = 0
+        if settings.is_pinecone_available and pinecone_namespace:
+            try:
+                from app.services.pinecone_service import get_pinecone_service
+                pinecone_service = get_pinecone_service()
+                
+                # Delete using document_id filter
+                pinecone_service.delete_document(
+                    document_id=document_id,
+                    namespace=pinecone_namespace
+                )
+                
+                vectors_deleted = chunk_count
+                logger.info(f"Deleted {vectors_deleted} vectors from Pinecone for document {document_id}")
+                
+            except Exception as e:
+                logger.warning(f"Failed to delete from Pinecone: {e}")
+        
+        # Get namespace for updating counts
+        namespace = await DocumentRepository.get_namespace_for_document(doc_uuid)
+        
+        # Delete from NeonDB (hard delete)
+        await DocumentRepository.hard_delete_document(doc_uuid)
+        
+        # Update namespace counts if applicable
+        if namespace:
+            await DocumentRepository.update_namespace_counts(namespace["id"])
+        
+        logger.info(f"Deleted document {document_id}")
+        
+        return DocumentDeleteResponse(
+            status="success",
+            message="Document deleted successfully",
+            document_id=document_id,
+            vectors_deleted=vectors_deleted
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete document {document_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "DELETE_DOCUMENT_ERROR",
+                "message": f"Failed to delete document: {str(e)}"
+            }
+        )
 
 
 # =============================================================================
@@ -403,12 +734,79 @@ async def process_multimodal(
     )
     
     # =========================================================================
-    # Step 8: Upsert to Pinecone (Optional)
+    # Step 8: Save to NeonDB FIRST (to get document_id for Pinecone)
+    # =========================================================================
+    
+    document_id = None
+    namespace_record = None
+    if settings.is_database_available:
+        logger.info("Step 8: Saving document metadata to NeonDB...")
+        
+        try:
+            from app.db.repository import DocumentRepository
+            
+            # Determine namespace to use
+            namespace_name = pinecone_namespace or settings.PINECONE_NAMESPACE
+            
+            # Ensure namespace exists
+            namespace_record = await DocumentRepository.get_namespace_by_name(namespace_name)
+            if not namespace_record:
+                namespace_record = await DocumentRepository.create_namespace(
+                    name=namespace_name,
+                    description=f"Auto-created namespace for {namespace_name}",
+                    default_dense_namespace=namespace_name,
+                    default_sparse_namespace=namespace_name,
+                )
+                logger.info(f"Created new namespace: {namespace_name}")
+            
+            # Count chunks with tables/images
+            chunks_with_tables = sum(
+                1 for c in multimodal_chunks 
+                if ContentType.TABLE in c.content_types
+            )
+            chunks_with_images = sum(
+                1 for c in multimodal_chunks 
+                if ContentType.IMAGE in c.content_types
+            )
+            
+            # Create document record - THIS GENERATES THE document_id
+            doc_record = await DocumentRepository.create_document(
+                filename=file.filename or "unknown.pdf",
+                original_filename=file.filename or "unknown.pdf",
+                file_size_bytes=file_size,
+                page_count=len(page_numbers) if page_numbers else None,
+                pinecone_dense_namespace=namespace_name,
+                pinecone_sparse_namespace=namespace_name,
+                processing_strategy=strategy.value,
+                chunk_count=len(multimodal_chunks),
+                total_chunks_with_tables=chunks_with_tables,
+                total_chunks_with_images=chunks_with_images,
+                ai_enhancement_enabled=ai_actually_enabled,
+            )
+            
+            document_id = str(doc_record['id'])  # Convert UUID to string for Pinecone
+            
+            # Link document to namespace
+            await DocumentRepository.link_document_to_namespace(
+                document_id=doc_record['id'],
+                namespace_id=namespace_record['id']
+            )
+            
+            logger.info(f"NeonDB document created with ID: {document_id}")
+            warnings.append(f"Document metadata saved to NeonDB (ID: {document_id})")
+            
+        except Exception as e:
+            warning_msg = f"NeonDB save failed: {str(e)}"
+            warnings.append(warning_msg)
+            logger.error(warning_msg, exc_info=True)
+    
+    # =========================================================================
+    # Step 9: Upsert to Pinecone (using NeonDB document_id)
     # =========================================================================
     
     upsert_result = None
     if upsert_to_pinecone:
-        logger.info("Step 8: Upserting chunks to Pinecone...")
+        logger.info("Step 9: Upserting chunks to Pinecone...")
         
         if not settings.is_pinecone_available:
             warning_msg = (
@@ -422,21 +820,73 @@ async def process_multimodal(
                 from app.services.pinecone_service import get_pinecone_service
                 
                 pinecone_service = get_pinecone_service()
+                
+                # IMPORTANT: Pass the NeonDB document_id to Pinecone
                 upsert_result = pinecone_service.upsert_chunks(
                     chunks=multimodal_chunks,
+                    document_id=document_id,  # Use NeonDB document_id!
                     filename=file.filename or "unknown.pdf",
                     namespace=pinecone_namespace
                 )
                 
                 logger.info(
-                    f"Pinecone upsert complete: {upsert_result['records_upserted']} records "
-                    f"to namespace '{upsert_result['namespace']}'"
+                    f"Pinecone upsert complete: {upsert_result.get('records_upserted', 0)} records "
+                    f"to namespace '{upsert_result.get('namespace', pinecone_namespace)}' "
+                    f"with document_id '{document_id}'"
                 )
                 
             except Exception as e:
                 warning_msg = f"Pinecone upsert failed: {str(e)}"
                 warnings.append(warning_msg)
                 logger.error(warning_msg, exc_info=True)
+    
+    # =========================================================================
+    # Step 10: Create chunk records in NeonDB (track vector IDs)
+    # =========================================================================
+    
+    if settings.is_database_available and document_id:
+        try:
+            from app.db.repository import DocumentRepository
+            
+            for idx, chunk in enumerate(multimodal_chunks):
+                # Generate vector IDs (same format as Pinecone uses)
+                dense_vector_id = f"{document_id}_{idx}"
+                sparse_vector_id = f"{document_id}_{idx}"
+                
+                # Extract first 200 chars for preview
+                text_preview = chunk.enhanced_content[:200] if chunk.enhanced_content else None
+                
+                # Determine content type based on content_types list
+                has_tables = ContentType.TABLE in chunk.content_types
+                has_images = ContentType.IMAGE in chunk.content_types
+                
+                if has_images and has_tables:
+                    content_type = "mixed"
+                elif has_images:
+                    content_type = "image"
+                elif has_tables:
+                    content_type = "table"
+                else:
+                    content_type = "text"
+                
+                await DocumentRepository.create_chunk(
+                    document_id=uuid_module.UUID(document_id),
+                    dense_vector_id=dense_vector_id,
+                    sparse_vector_id=sparse_vector_id,
+                    chunk_index=idx,
+                    text_preview=text_preview,
+                    has_table=has_tables,
+                    has_image=has_images,
+                    content_type=content_type,
+                    page_numbers=chunk.metadata.page_numbers or [],
+                )
+            
+            logger.info(f"Created {len(multimodal_chunks)} chunk records in NeonDB")
+            
+        except Exception as e:
+            warning_msg = f"NeonDB chunk records failed: {str(e)}"
+            warnings.append(warning_msg)
+            logger.error(warning_msg, exc_info=True)
     
     # Calculate processing time
     processing_time = time.time() - start_time
@@ -458,14 +908,19 @@ async def process_multimodal(
         logger.info(
             f"Processing complete: {len(multimodal_chunks)} chunks, "
             f"{stats.ai_enhanced_chunks} AI-enhanced, "
-            f"{upsert_result['records_upserted']} upserted to Pinecone, "
+            f"{upsert_result.get('records_upserted', 0)} upserted to Pinecone, "
             f"{processing_time:.2f}s total"
         )
         # Add upsert info to warnings for visibility
-        warnings.append(
-            f"Successfully upserted {upsert_result['records_upserted']} records to Pinecone "
-            f"(namespace: {upsert_result['namespace']})"
-        )
+        if upsert_result.get('records_upserted', 0) > 0:
+            warnings.append(
+                f"Successfully upserted {upsert_result.get('records_upserted', 0)} records to Pinecone "
+                f"(namespace: {upsert_result.get('namespace', pinecone_namespace)})"
+            )
+        else:
+            warnings.append(
+                f"No records were upserted to Pinecone - {upsert_result.get('message', 'no chunks available')}"
+            )
         
         # Update response warnings
         response.warnings = warnings

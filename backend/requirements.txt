@@ -48,6 +48,19 @@ langchain-openai>=0.0.5
 langchain-core>=0.1.0
 
 # Additional image processing
+
+# =============================================================================
+# NeonDB / PostgreSQL Database
+# =============================================================================
+
+# Async PostgreSQL driver for FastAPI
+asyncpg>=0.29.0
+
+# SQLAlchemy for ORM (optional but recommended)
+sqlalchemy[asyncio]>=2.0.25
+
+# Database migrations
+alembic>=1.13.1
 opencv-python-headless>=4.8.0
 
 # =============================================================================

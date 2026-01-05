@@ -43,11 +43,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   } | null>(null);
 
   const [settings, setSettings] = useState<UploadSettings>({
-    strategy: "hi_res",
+    strategy: 'hi_res',
     max_chunk_size: 3000,
     enable_ai_enhancement: true,
     upsert_to_pinecone: true,
-    pinecone_namespace: currentNamespace || "",
+    pinecone_namespace: currentNamespace || '',
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,7 +93,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     }
 
     const targetNamespace = isCreatingNamespace ? newNamespace : namespace;
-
+    
     if (!targetNamespace) {
       setError("Please select or create a namespace");
       return;
@@ -108,7 +108,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         ...settings,
         pinecone_namespace: targetNamespace,
       };
-
+      
       await onUpload(selectedFile, uploadSettings);
       setUploadedInfo({
         name: selectedFile.name,
@@ -337,18 +337,18 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                       <div className="flex gap-3">
                         <button
                           onClick={() =>
-                            setSettings({ ...settings, strategy: "hi_res" })
+                            setSettings({ ...settings, strategy: 'hi_res' })
                           }
                           className={`flex-1 p-3 border-4 border-black font-bold text-sm uppercase transition-all ${
-                            settings.strategy === "hi_res"
-                              ? "bg-[#00FFFF] text-black"
-                              : "bg-white text-black hover:bg-[#FFFEF0]"
+                            settings.strategy === 'hi_res'
+                              ? 'bg-[#00FFFF] text-black'
+                              : 'bg-white text-black hover:bg-[#FFFEF0]'
                           }`}
                           style={{
                             boxShadow:
-                              settings.strategy === "hi_res"
-                                ? "4px 4px 0px #000000"
-                                : "none",
+                              settings.strategy === 'hi_res'
+                                ? '4px 4px 0px #000000'
+                                : 'none',
                           }}
                         >
                           🎯 HIGH RESOLUTION
@@ -358,18 +358,18 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                         </button>
                         <button
                           onClick={() =>
-                            setSettings({ ...settings, strategy: "fast" })
+                            setSettings({ ...settings, strategy: 'fast' })
                           }
                           className={`flex-1 p-3 border-4 border-black font-bold text-sm uppercase transition-all ${
-                            settings.strategy === "fast"
-                              ? "bg-[#00FFFF] text-black"
-                              : "bg-white text-black hover:bg-[#FFFEF0]"
+                            settings.strategy === 'fast'
+                              ? 'bg-[#00FFFF] text-black'
+                              : 'bg-white text-black hover:bg-[#FFFEF0]'
                           }`}
                           style={{
                             boxShadow:
-                              settings.strategy === "fast"
-                                ? "4px 4px 0px #000000"
-                                : "none",
+                              settings.strategy === 'fast'
+                                ? '4px 4px 0px #000000'
+                                : 'none',
                           }}
                         >
                           ⚡ FAST
@@ -404,7 +404,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                           }
                           className="w-full h-3 bg-white border-4 border-black appearance-none cursor-pointer"
                           style={{
-                            boxShadow: "2px 2px 0px #000000",
+                            boxShadow: '2px 2px 0px #000000',
                           }}
                         />
                         <div className="flex justify-between mt-2">
@@ -487,9 +487,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                 PROCESSING DOCUMENT...
               </p>
               <p className="text-sm font-bold text-black/60 mt-2 uppercase">
-                {settings.strategy === "hi_res"
-                  ? "Using high-resolution extraction for maximum accuracy"
-                  : "Using fast processing mode"}
+                {settings.strategy === 'hi_res' 
+                  ? 'Using high-resolution extraction for maximum accuracy' 
+                  : 'Using fast processing mode'}
               </p>
               {settings.enable_ai_enhancement && (
                 <p className="text-xs font-bold text-black/50 mt-2 uppercase">
@@ -557,8 +557,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               disabled={!selectedFile || (!namespace && !newNamespace)}
             >
               {!selectedFile || (!namespace && !newNamespace)
-                ? "SELECT FILE & NAMESPACE"
-                : "UPLOAD & PROCESS →"}
+                ? 'SELECT FILE & NAMESPACE'
+                : 'UPLOAD & PROCESS →'}
             </Button>
           </div>
         )}

@@ -180,14 +180,29 @@ class MultimodalProcessor:
                 
                 # Additional options for better extraction
                 include_metadata=True,
+                
+                # OCR language - explicitly set to English
+                # Add more languages as needed: ["eng", "fra", "deu"]
+                languages=["eng"],
+                
+                # Extract images from PDF for OCR if strategy is hi_res
+                extract_images_in_pdf=True,
             )
             
-            # Log extraction results
+            # Log extraction results with detailed element info
             element_counts = self._count_elements_by_type(elements)
             logger.info(
                 f"Partitioning complete. Extracted {len(elements)} elements: "
                 f"{element_counts}"
             )
+            
+            # Debug: Log first few element types and preview their content
+            if elements:
+                logger.debug("First 5 elements preview:")
+                for i, elem in enumerate(elements[:5]):
+                    elem_type = type(elem).__name__
+                    elem_text = str(elem)[:100] if elem else ""
+                    logger.debug(f"  [{i}] {elem_type}: {elem_text}")
             
             return elements
             

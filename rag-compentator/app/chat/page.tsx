@@ -23,8 +23,6 @@ import {
   UploadSettings,
 } from "@/lib/types";
 import { generateId } from "@/lib/api";
-import { useUploadDocument } from "@/lib/hooks/use-documents";
-import { useNamespaces } from "@/lib/hooks/use-namespaces";
 
 // Mock data
 const mockNamespaces: Namespace[] = [
@@ -134,11 +132,6 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeSource, setActiveSource] = useState<Source | null>(null);
-
-  // React Query hooks
-  const uploadMutation = useUploadDocument();
-  const { data: namespaces = mockNamespaces, isLoading: namespacesLoading } =
-    useNamespaces();
   const [allSources, setAllSources] = useState<Source[]>([]);
 
   // Settings State
@@ -150,6 +143,7 @@ export default function ChatPage() {
     streamResponses: false,
   });
 
+  const namespaces = mockNamespaces;
   const documents = mockDocuments.filter(
     (d) => d.namespace === selectedNamespace
   );
@@ -225,17 +219,19 @@ export default function ChatPage() {
     }
   };
 
-  const handleUpload = async (file: File, settings: UploadSettings) => {
-    try {
-      await uploadMutation.mutateAsync({
-        file,
-        settings,
-      });
-      setShowUploadModal(false);
-    } catch (error) {
-      console.error("Upload failed:", error);
-      throw error; // Re-throw to let the modal handle the error
-    }
+  const handleUpload = async (
+    file: File,
+    settings: UploadSettings
+  ) => {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    console.log(
+      "Uploading:",
+      file.name,
+      "to namespace:",
+      settings.pinecone_namespace,
+      "with settings:",
+      settings
+    );
   };
 
   const getSelectedDocumentName = () => {

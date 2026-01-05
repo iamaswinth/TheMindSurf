@@ -572,3 +572,200 @@ class DeleteNamespaceRequest(BaseModel):
         default=False,
         description="Must be true to confirm deletion"
     )
+
+
+# =============================================================================
+# Namespace Management Schemas
+# =============================================================================
+
+class NamespaceMetadata(BaseModel):
+    """Metadata for a namespace."""
+    
+    last_modified: Optional[datetime] = Field(default=None, description="Last modification timestamp")
+    vector_count: Optional[int] = Field(default=None, description="Total vectors in namespace")
+
+
+class NamespaceBase(BaseModel):
+    """Base namespace schema."""
+    
+    name: str = Field(..., min_length=1, max_length=255, description="Namespace name")
+    description: Optional[str] = Field(default=None, description="Namespace description")
+
+
+class NamespaceCreate(NamespaceBase):
+    """Request schema for creating a namespace."""
+    pass
+
+
+class NamespaceResponse(BaseModel):
+    """Response schema for a namespace."""
+    
+    id: str = Field(..., description="Unique namespace identifier")
+    name: str = Field(..., description="Namespace name")
+    description: Optional[str] = Field(default=None, description="Namespace description")
+    document_count: int = Field(default=0, description="Number of documents in namespace")
+    total_chunks: int = Field(default=0, description="Total chunks in namespace")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    metadata: Optional[NamespaceMetadata] = Field(default=None, description="Additional metadata")
+
+
+class NamespaceDetailResponse(NamespaceResponse):
+    """Detailed namespace response with documents list."""
+    
+    documents: list[str] = Field(default_factory=list, description="List of document IDs")
+    stats: Optional[dict] = Field(default=None, description="Namespace statistics")
+
+
+class NamespaceListResponse(BaseModel):
+    """Response schema for listing namespaces."""
+    
+    namespaces: list[NamespaceResponse] = Field(default_factory=list)
+    total: int = Field(default=0)
+
+
+class NamespaceDeleteResponse(BaseModel):
+    """Response schema for namespace deletion."""
+    
+    status: str = Field(default="success")
+    message: str = Field(..., description="Deletion result message")
+    deleted_documents: list[str] = Field(default_factory=list, description="IDs of deleted documents")
+
+
+# =============================================================================
+# Document Management Schemas
+# =============================================================================
+
+class DocumentMetadata(BaseModel):
+    """Metadata for a document."""
+    
+    processing_strategy: Optional[str] = Field(default=None, description="Processing strategy used")
+    chunk_count: Optional[int] = Field(default=None, description="Number of chunks")
+    has_images: bool = Field(default=False, description="Document contains images")
+    has_tables: bool = Field(default=False, description="Document contains tables")
+
+
+class DocumentBase(BaseModel):
+    """Base document schema."""
+    
+    name: str = Field(..., description="Document filename")
+    namespace_id: Optional[str] = Field(default=None, description="Namespace ID")
+
+
+class DocumentResponse(BaseModel):
+    """Response schema for a document."""
+    
+    id: str = Field(..., description="Unique document identifier")
+    name: str = Field(..., description="Document filename")
+    page_count: Optional[int] = Field(default=None, description="Number of pages")
+    file_size: str = Field(default="0 B", description="Formatted file size")
+    file_size_bytes: int = Field(default=0, description="File size in bytes")
+    uploaded_at: datetime = Field(..., description="Upload timestamp")
+    namespace: Optional[str] = Field(default=None, description="Namespace ID")
+    namespace_name: Optional[str] = Field(default=None, description="Namespace name")
+    metadata: Optional[DocumentMetadata] = Field(default=None, description="Document metadata")
+
+
+class DocumentDetailResponse(DocumentResponse):
+    """Detailed document response with processing stats."""
+    
+    processing_stats: Optional[dict] = Field(default=None, description="Processing statistics")
+
+
+class DocumentListResponse(BaseModel):
+    """Response schema for listing documents."""
+    
+    documents: list[DocumentResponse] = Field(default_factory=list)
+    total: int = Field(default=0)
+    page: int = Field(default=1)
+    limit: int = Field(default=10)
+
+
+class DocumentDeleteResponse(BaseModel):
+    """Response schema for document deletion."""
+    
+    status: str = Field(default="success")
+    message: str = Field(default="Document deleted successfully")
+    document_id: str = Field(..., description="Deleted document ID")
+    vectors_deleted: int = Field(default=0, description="Number of vectors deleted from Pinecone")
+
+
+# =============================================================================
+# Chat Schemas
+# =============================================================================
+
+class ChatMode(str, Enum):
+    """Chat modes for different query scopes."""
+    NAMESPACE = "namespace"  # Chat with all documents in a namespace
+    SINGLE = "single"        # Chat with a single document
+    MULTI = "multi"          # Chat with multiple selected documents
+
+
+class ChatRequest(BaseModel):
+    """Request schema for chat endpoint."""
+    
+    message: str = Field(..., min_length=1, description="User message/question")
+    mode: ChatMode = Field(..., description="Chat mode: namespace, single, or multi")
+    namespace_id: Optional[str] = Field(
+        default=None,
+        description="Namespace ID (required for namespace mode)"
+    )
+    document_id: Optional[str] = Field(
+        default=None,
+        description="Single document ID (required for single mode)"
+    )
+    document_ids: Optional[list[str]] = Field(
+        default=None,
+        description="Multiple document IDs (required for multi mode)"
+    )
+    temperature: Optional[float] = Field(
+        default=0.3,
+        ge=0,
+        le=2,
+        description="Sampling temperature"
+    )
+    max_tokens: Optional[int] = Field(
+        default=2000,
+        ge=100,
+        le=4000,
+        description="Maximum tokens in response"
+    )
+    top_k: Optional[int] = Field(
+        default=5,
+        ge=1,
+        le=50,
+        description="Number of search results to retrieve"
+    )
+    use_hybrid_search: bool = Field(
+        default=True,
+        description="Use hybrid search (dense + sparse)"
+    )
+
+
+class ChatSource(BaseModel):
+    """Source information for chat response."""
+    
+    document_name: str = Field(..., description="Source document name")
+    document_id: str = Field(..., description="Source document ID")
+    page_number: Optional[int] = Field(default=None, description="Page number")
+    chunk_text: str = Field(..., description="Retrieved chunk text")
+    score: float = Field(..., description="Relevance score")
+    metadata: Optional[dict] = Field(default=None, description="Additional metadata")
+
+
+class ChatMetadata(BaseModel):
+    """Metadata for chat response."""
+    
+    model_used: str = Field(..., description="LLM model used")
+    search_time_ms: float = Field(..., description="Search time in milliseconds")
+    generation_time_ms: float = Field(..., description="Generation time in milliseconds")
+    total_tokens: Optional[int] = Field(default=None, description="Total tokens used")
+    mode: ChatMode = Field(..., description="Chat mode used")
+    documents_searched: int = Field(default=0, description="Number of documents searched")
+
+
+class ChatResponse(BaseModel):
+    """Response schema for chat endpoint."""
+    
+    response: str = Field(..., description="Generated answer")
+    sources: list[ChatSource] = Field(default_factory=list, description="Source documents")
+    metadata: ChatMetadata = Field(..., description="Response metadata")

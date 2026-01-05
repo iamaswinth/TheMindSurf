@@ -12,12 +12,21 @@ export const namespaceKeys = {
 };
 
 // ============================================
-// GET ALL NAMESPACES
+// GET ALL NAMESPACES (from NeonDB via Next.js API)
 // ============================================
 export function useNamespaces() {
   return useQuery({
     queryKey: namespaceKeys.lists(),
-    queryFn: () => apiClient.getNamespaces(),
+    queryFn: async () => {
+      // Use NeonDB API route for fast listing
+      const response = await fetch("/api/neon/namespaces");
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch namespaces from NeonDB");
+      }
+
+      return response.json() as Promise<Namespace[]>;
+    },
     staleTime: 30 * 1000, // 30 seconds
   });
 }

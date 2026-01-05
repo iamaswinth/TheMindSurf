@@ -188,6 +188,22 @@ class Settings(BaseSettings):
     )
     
     # ==========================================================================
+    # NeonDB / PostgreSQL Configuration
+    # ==========================================================================
+    DATABASE_URL: Optional[str] = Field(
+        default=None,
+        description="PostgreSQL connection string (NeonDB). Format: postgresql://user:pass@host/db"
+    )
+    DATABASE_POOL_SIZE: int = Field(
+        default=10,
+        description="Database connection pool size"
+    )
+    DATABASE_MAX_OVERFLOW: int = Field(
+        default=20,
+        description="Maximum overflow connections in pool"
+    )
+    
+    # ==========================================================================
     # Computed Properties
     # ==========================================================================
     @property
@@ -204,6 +220,11 @@ class Settings(BaseSettings):
     def is_pinecone_available(self) -> bool:
         """Check if Pinecone features can be used."""
         return bool(self.PINECONE_API_KEY)
+    
+    @property
+    def is_database_available(self) -> bool:
+        """Check if NeonDB database is configured."""
+        return bool(self.DATABASE_URL)
     
     def validate_ai_config(self) -> tuple[bool, str]:
         """

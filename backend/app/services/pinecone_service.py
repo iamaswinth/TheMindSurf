@@ -463,7 +463,8 @@ class PineconeService:
         top_k: Optional[int] = None,
         rerank_top_n: Optional[int] = None,
         namespace: Optional[str] = None,
-        include_metadata: bool = True
+        include_metadata: bool = True,
+        document_ids: Optional[list[str]] = None,
     ) -> dict:
         """
         Perform hybrid search using both dense and sparse indexes.
@@ -472,8 +473,9 @@ class PineconeService:
         1. Searches the dense index for semantic matches
         2. Searches the sparse index for lexical matches
         3. Merges and deduplicates results
-        4. Reranks using bge-reranker-v2-m3
-        5. Returns the most relevant matches
+        4. Filters by document_ids if provided
+        5. Reranks using bge-reranker-v2-m3
+        6. Returns the most relevant matches
         
         Args:
             query: Search query text
@@ -481,6 +483,7 @@ class PineconeService:
             rerank_top_n: Number of results after reranking (default: configured value)
             namespace: Namespace to search (default: configured namespace)
             include_metadata: Whether to include full metadata in results
+            document_ids: Optional list of document IDs to filter results
         
         Returns:
             Dictionary containing search results and statistics
@@ -497,21 +500,44 @@ class PineconeService:
         try:
             start_time = time.time()
             
+            # Increase search count if filtering by document_ids
+            search_top_k = top_k * 3 if document_ids else top_k
+            
             # 1. Search dense index (semantic search)
             logger.debug("Searching dense index...")
             dense_results = self._search_index(
-                self.dense_index, query, top_k, namespace
+                self.dense_index, query, search_top_k, namespace
             )
             
             # 2. Search sparse index (lexical search)
             logger.debug("Searching sparse index...")
             sparse_results = self._search_index(
-                self.sparse_index, query, top_k, namespace
+                self.sparse_index, query, search_top_k, namespace
             )
             
             # 3. Merge and deduplicate
             logger.debug("Merging results...")
             merged_results = self._merge_and_deduplicate(sparse_results, dense_results)
+            
+            # 3.5. Filter by document_ids if provided
+            if document_ids:
+                document_ids_set = set(document_ids)
+                logger.info(f"Filtering by document_ids: {document_ids_set}")
+                
+                # DEBUG: Log what document_ids are in the search results
+                found_doc_ids = set()
+                for result in merged_results[:5]:  # Log first 5
+                    doc_id = result.get('metadata', {}).get('document_id', 'NO_DOC_ID')
+                    found_doc_ids.add(doc_id)
+                logger.info(f"Sample document_ids in Pinecone results: {found_doc_ids}")
+                
+                filtered_merged = []
+                for result in merged_results:
+                    doc_id = result.get('metadata', {}).get('document_id', '')
+                    if doc_id in document_ids_set:
+                        filtered_merged.append(result)
+                merged_results = filtered_merged
+                logger.info(f"Filtered to {len(merged_results)} results for {len(document_ids)} documents")
             
             # 4. Rerank
             logger.debug("Reranking results...")

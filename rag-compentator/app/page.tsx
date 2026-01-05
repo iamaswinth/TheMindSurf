@@ -8,8 +8,6 @@ import { UploadModal } from "@/components/ui/UploadModal";
 import { Button, Card, Select } from "@/components/ui/Components";
 import { PlusIcon, ChevronRightIcon, MenuIcon } from "@/components/ui/Icons";
 import { ChatMode, Document, Namespace, UploadSettings } from "@/lib/types";
-import { useUploadDocument } from "@/lib/hooks/use-documents";
-import { useNamespaces } from "@/lib/hooks/use-namespaces";
 import Link from "next/link";
 
 // Mock data for demonstration
@@ -74,10 +72,7 @@ export default function DashboardPage() {
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
 
-  // React Query hooks
-  const uploadMutation = useUploadDocument();
-  const { data: namespaces = [], isLoading: namespacesLoading } =
-    useNamespaces();
+  const namespaces = mockNamespaces;
   const documents = mockDocuments.filter(
     (d) => d.namespace === selectedNamespace
   );
@@ -103,17 +98,20 @@ export default function DashboardPage() {
     }
   };
 
-  const handleUpload = async (file: File, settings: UploadSettings) => {
-    try {
-      await uploadMutation.mutateAsync({
-        file,
-        settings,
-      });
-      setShowUploadModal(false);
-    } catch (error) {
-      console.error("Upload failed:", error);
-      throw error; // Re-throw to let the modal handle the error
-    }
+  const handleUpload = async (
+    file: File,
+    settings: UploadSettings
+  ) => {
+    // Simulate upload
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    console.log(
+      "Uploading:",
+      file.name,
+      "to namespace:",
+      settings.pinecone_namespace,
+      "with settings:",
+      settings
+    );
   };
 
   const canStartChat = () => {

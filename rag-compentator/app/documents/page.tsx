@@ -19,8 +19,6 @@ import {
 } from "@/components/ui/Icons";
 import { Document, Namespace, UploadSettings } from "@/lib/types";
 import { formatDate } from "@/lib/api";
-import { useUploadDocument, useDocuments } from "@/lib/hooks/use-documents";
-import { useNamespaces } from "@/lib/hooks/use-namespaces";
 import Link from "next/link";
 
 // Mock data
@@ -83,19 +81,11 @@ export default function DocumentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedNamespace, setSelectedNamespace] = useState<string>("all");
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [documents, setDocuments] = useState(mockDocuments);
 
-  // React Query hooks
-  const uploadMutation = useUploadDocument();
-  const { data: namespaces = [] } = useNamespaces();
-  const { data: documentsData, isLoading: documentsLoading } = useDocuments(
-    selectedNamespace !== "all" ? selectedNamespace : undefined
-  );
-
-  // Ensure documents is always an array
-  const documents = Array.isArray(documentsData) ? documentsData : [];
+  const namespaces = mockNamespaces;
 
   const filteredDocuments = documents.filter((doc) => {
-    if (!doc || !doc.name) return false;
     const matchesSearch = doc.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -106,23 +96,24 @@ export default function DocumentsPage() {
 
   const handleDeleteDocument = (docId: string) => {
     if (confirm("Are you sure you want to delete this document?")) {
-      // TODO: Implement delete mutation when backend endpoint is ready
-      console.log("Delete document:", docId);
+      setDocuments(documents.filter((doc) => doc.id !== docId));
     }
   };
 
-  const handleUpload = async (file: File, settings: UploadSettings) => {
-    try {
-      await uploadMutation.mutateAsync({
-        file,
-        settings,
-      });
-      // React Query will automatically refetch documents list
-      setShowUploadModal(false);
-    } catch (error) {
-      console.error("Upload failed:", error);
-      throw error; // Re-throw to let the modal handle the error
-    }
+  const handleUpload = async (
+    file: File,
+    settings: UploadSettings
+  ) => {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const newDoc: Document = {
+      id: `doc${Date.now()}`,
+      name: file.name,
+      pageCount: Math.floor(Math.random() * 50) + 10,
+      fileSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+      uploadedAt: new Date().toISOString(),
+      namespace: settings.pinecone_namespace,
+    };
+    setDocuments([newDoc, ...documents]);
   };
 
   const getNamespaceName = (nsId: string) => {
@@ -199,7 +190,7 @@ export default function DocumentsPage() {
 
             {/* Documents Table */}
             {filteredDocuments.length === 0 ? (
-              <Card className="p-8 bg-white border-4 border-black shadow-[8px_8px_0px_#000]">
+              <Card variant="white" className="p-8">
                 <EmptyState
                   icon={<FileTextIcon size={48} />}
                   title="NO DOCUMENTS FOUND"

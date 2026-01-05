@@ -195,10 +195,17 @@ class ChunkingService:
         soft_limit = new_after_n_chars or self.new_after_n_chars
         min_chars = combine_under_n_chars or self.combine_under_n_chars
         
+        # Debug: Log element types before chunking
+        element_types = {}
+        for elem in elements:
+            elem_type = type(elem).__name__
+            element_types[elem_type] = element_types.get(elem_type, 0) + 1
+        
         logger.info(
             f"Chunking {len(elements)} elements "
             f"(max={max_chars}, soft={soft_limit}, min={min_chars})"
         )
+        logger.debug(f"Element types before chunking: {element_types}")
         
         try:
             chunks = chunk_by_title(
@@ -211,6 +218,16 @@ class ChunkingService:
             )
             
             logger.info(f"Created {len(chunks)} chunks from {len(elements)} elements")
+            
+            # Debug: If no chunks created, log warning
+            if len(chunks) == 0 and len(elements) > 0:
+                logger.warning(
+                    f"No chunks created from {len(elements)} elements. "
+                    f"Element types: {element_types}. "
+                    "This usually means the elements contain only non-text content "
+                    "(e.g., PageBreak) or the text is too short to meet minimum chunk size."
+                )
+            
             return chunks
             
         except Exception as e:

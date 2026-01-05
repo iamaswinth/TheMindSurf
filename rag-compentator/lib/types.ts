@@ -63,7 +63,7 @@ export interface ChatSettings {
 
 // Upload Settings
 export interface UploadSettings {
-  strategy: "hi_res" | "fast";
+  strategy: 'hi_res' | 'fast';
   max_chunk_size: number;
   enable_ai_enhancement: boolean;
   upsert_to_pinecone: boolean;
