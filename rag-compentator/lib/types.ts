@@ -5,19 +5,80 @@ export type ChatMode = "namespace" | "single" | "multi";
 export interface Document {
   id: string;
   name: string;
-  pageCount: number;
-  fileSize: string;
-  uploadedAt: string;
+  page_count: number;
+  file_size: string;
+  file_size_bytes?: number;
+  uploaded_at: string;
   namespace: string;
-  metadata?: Record<string, unknown>;
+  namespace_name?: string;
+  metadata?: {
+    processing_strategy?: string;
+    chunk_count?: number;
+    has_images?: boolean;
+    has_tables?: boolean;
+  };
+}
+
+export interface DocumentDetail extends Document {
+  processing_stats?: {
+    total_chunks: number;
+    ai_enhanced_chunks: number;
+    total_tables: number;
+    total_images: number;
+  };
+}
+
+export interface DocumentListResponse {
+  documents: Document[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface DeleteDocumentResponse {
+  status: string;
+  message: string;
+  document_id: string;
+  vectors_deleted: number;
 }
 
 // Namespace Types
 export interface Namespace {
   id: string;
   name: string;
-  documentCount: number;
-  createdAt: string;
+  description?: string;
+  document_count: number;
+  total_chunks?: number;
+  created_at: string;
+  metadata?: {
+    last_modified?: string;
+    vector_count?: number;
+  };
+}
+
+export interface NamespaceDetail extends Namespace {
+  documents?: string[];
+  stats?: {
+    total_vectors: number;
+    total_pages: number;
+    total_file_size: string;
+  };
+}
+
+export interface NamespaceListResponse {
+  namespaces: Namespace[];
+  total: number;
+}
+
+export interface CreateNamespaceRequest {
+  name: string;
+  description?: string;
+}
+
+export interface DeleteNamespaceResponse {
+  status: string;
+  message: string;
+  deleted_documents: string[];
 }
 
 // Source Types
@@ -42,13 +103,31 @@ export interface Message {
   error?: string;
 }
 
-// Chat Response
+// Chat Request - matches backend API
+export interface ChatRequest {
+  message: string;
+  mode: ChatMode;
+  namespace_id?: string; // Required for namespace mode
+  document_id?: string; // Required for single mode
+  document_ids?: string[]; // Required for multi mode
+  temperature?: number; // 0-2, default: 0.3
+  max_tokens?: number; // 100-4000, default: 2000
+  top_k?: number; // 1-50, default: 5
+  use_hybrid_search?: boolean; // default: true
+}
+
+// Chat Response - matches backend API
 export interface ChatResponse {
   response: string;
-  sources?: Source[];
-  metadata?: {
+  sources: Source[];
+  metadata: {
+    model?: string;
     tokens_used?: number;
-    response_time?: string;
+    response_time_seconds?: number;
+    search_time_seconds?: number;
+    mode?: ChatMode;
+    namespace_id?: string;
+    document_ids?: string[];
   };
 }
 
@@ -63,7 +142,7 @@ export interface ChatSettings {
 
 // Upload Settings
 export interface UploadSettings {
-  strategy: 'hi_res' | 'fast';
+  strategy: "hi_res" | "fast";
   max_chunk_size: number;
   enable_ai_enhancement: boolean;
   upsert_to_pinecone: boolean;
@@ -91,6 +170,57 @@ export interface QueryResponse {
   };
 }
 
+// Multimodal Processing Types (matching backend API response)
+export type ContentType = "text" | "table" | "image";
+
+export interface OriginalContent {
+  raw_text: string;
+  tables_html: string[];
+  images_base64: string[];
+}
+
+export interface ChunkMetadata {
+  page_numbers: number[];
+  element_types?: string[];
+  is_ai_enhanced: boolean;
+  ai_model_used?: string;
+  processing_time_ms?: number;
+  token_count?: number;
+}
+
+export interface MultimodalChunk {
+  chunk_id: number;
+  enhanced_content: string;
+  content_types: ContentType[];
+  original_content: OriginalContent;
+  metadata: ChunkMetadata;
+}
+
+export interface ProcessingStats {
+  total_elements_extracted: number;
+  text_only_chunks: number;
+  chunks_with_tables: number;
+  chunks_with_images: number;
+  ai_enhanced_chunks: number;
+  ai_enhancement_failures?: number;
+  total_tables_found: number;
+  total_images_found: number;
+  total_pages: number;
+  estimated_tokens?: number;
+}
+
+export interface MultimodalProcessResponse {
+  filename: string;
+  total_chunks: number;
+  processing_strategy: "hi_res" | "fast";
+  ai_enhancement_enabled: boolean;
+  processing_stats: ProcessingStats;
+  chunks: MultimodalChunk[];
+  processing_time_seconds: number;
+  warnings: string[];
+}
+
+// Legacy upload response (deprecated - use MultimodalProcessResponse)
 export interface UploadResponse {
   success: boolean;
   document_id: string;

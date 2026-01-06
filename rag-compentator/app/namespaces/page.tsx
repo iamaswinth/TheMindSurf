@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { Card, Button, Input, EmptyState } from "@/components/ui/Components";
+import { Namespace } from "@/lib/types";
 import {
   MenuIcon,
   PlusIcon,
@@ -11,27 +12,13 @@ import {
   SearchIcon,
   XIcon,
 } from "@/components/ui/Icons";
-import { Namespace } from "@/lib/types";
 import { formatDate } from "@/lib/api";
+import {
+  useNamespaces,
+  useCreateNamespace,
+  useDeleteNamespace,
+} from "@/lib/hooks/use-namespaces";
 import Link from "next/link";
-
-// Mock data
-const mockNamespaces: Namespace[] = [
-  { id: "ns1", name: "cn_unit5", documentCount: 5, createdAt: "2025-12-01" },
-  { id: "ns2", name: "ml_basics", documentCount: 3, createdAt: "2025-12-15" },
-  {
-    id: "ns3",
-    name: "research_papers",
-    documentCount: 8,
-    createdAt: "2025-12-20",
-  },
-  {
-    id: "ns4",
-    name: "project_docs",
-    documentCount: 12,
-    createdAt: "2025-01-01",
-  },
-];
 
 // Color palette for namespace cards
 const cardColors = ["cyan", "lime", "pink", "yellow", "white"] as const;
@@ -41,33 +28,67 @@ export default function NamespacesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newNamespaceName, setNewNamespaceName] = useState("");
-  const [namespaces, setNamespaces] = useState(mockNamespaces);
+  const [newNamespaceDescription, setNewNamespaceDescription] = useState("");
+  const [deletingNamespaceId, setDeletingNamespaceId] = useState<string | null>(
+    null
+  );
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [namespaceToDelete, setNamespaceToDelete] = useState<Namespace | null>(
+    null
+  );
+  const [deleteConfirmationName, setDeleteConfirmationName] = useState("");
+
+  // Use real React Query hooks
+  const { data: namespaces = [], isLoading, error } = useNamespaces();
+  const createMutation = useCreateNamespace();
+  const deleteMutation = useDeleteNamespace();
 
   const filteredNamespaces = namespaces.filter((ns) =>
     ns.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleCreateNamespace = () => {
+  const handleCreateNamespace = async () => {
     if (newNamespaceName.trim()) {
-      const newNs: Namespace = {
-        id: `ns${Date.now()}`,
-        name: newNamespaceName.trim(),
-        documentCount: 0,
-        createdAt: new Date().toISOString(),
-      };
-      setNamespaces([newNs, ...namespaces]);
-      setNewNamespaceName("");
-      setShowCreateModal(false);
+      try {
+        await createMutation.mutateAsync({
+          name: newNamespaceName.trim(),
+          description: newNamespaceDescription.trim() || undefined,
+        });
+        setNewNamespaceName("");
+        setNewNamespaceDescription("");
+        setShowCreateModal(false);
+      } catch (error) {
+        console.error("Failed to create namespace:", error);
+      }
     }
   };
 
-  const handleDeleteNamespace = (nsId: string) => {
-    if (
-      confirm(
-        "Are you sure you want to delete this namespace? All documents will be removed."
-      )
-    ) {
-      setNamespaces(namespaces.filter((ns) => ns.id !== nsId));
+  const handleDeleteNamespace = async (nsId: string, nsName: string) => {
+    const namespace = namespaces.find((ns) => ns.id === nsId);
+    if (namespace) {
+      setNamespaceToDelete(namespace);
+      setShowDeleteModal(true);
+    }
+  };
+
+  const confirmDeleteNamespace = async () => {
+    if (!namespaceToDelete) return;
+
+    if (deleteConfirmationName !== namespaceToDelete.name) {
+      alert("Namespace name does not match. Please try again.");
+      return;
+    }
+
+    try {
+      setDeletingNamespaceId(namespaceToDelete.id);
+      await deleteMutation.mutateAsync(namespaceToDelete.id);
+      setDeletingNamespaceId(null);
+      setShowDeleteModal(false);
+      setNamespaceToDelete(null);
+      setDeleteConfirmationName("");
+    } catch (error) {
+      console.error("Failed to delete namespace:", error);
+      setDeletingNamespaceId(null);
     }
   };
 
@@ -117,8 +138,32 @@ export default function NamespacesPage() {
               />
             </div>
 
+            {/* Loading State */}
+            {isLoading && (
+              <Card variant="white" className="p-8 text-center">
+                <div className="inline-block w-12 h-12 border-4 border-black border-t-[#FFFF00] rounded-full animate-spin mb-4" />
+                <p className="text-black font-bold uppercase">
+                  Loading namespaces...
+                </p>
+              </Card>
+            )}
+
+            {/* Error State */}
+            {error && (
+              <Card variant="white" className="p-8">
+                <div className="text-center">
+                  <p className="text-[#FF006E] font-black text-lg uppercase mb-2">
+                    ⚠️ ERROR
+                  </p>
+                  <p className="text-black font-bold">
+                    {error.message || "Failed to load namespaces"}
+                  </p>
+                </div>
+              </Card>
+            )}
+
             {/* Namespaces Grid */}
-            {filteredNamespaces.length === 0 ? (
+            {!isLoading && !error && filteredNamespaces.length === 0 ? (
               <Card variant="white" className="p-8">
                 <EmptyState
                   icon={<FolderIcon size={48} />}
@@ -162,25 +207,49 @@ export default function NamespacesPage() {
                             <h3 className="font-black text-black text-lg uppercase">
                               {ns.name}
                             </h3>
+                            {ns.description && (
+                              <p className="text-xs font-bold text-black/60 mt-1">
+                                {ns.description}
+                              </p>
+                            )}
                             <p className="inline-block mt-1 px-2 py-0.5 bg-white border-2 border-black text-xs font-bold">
-                              {ns.documentCount} DOCS
+                              {ns.document_count} DOCS
                             </p>
+                            {ns.total_chunks !== undefined && (
+                              <span className="ml-2 inline-block px-2 py-0.5 bg-[#00FFFF] border-2 border-black text-xs font-bold">
+                                {ns.total_chunks} CHUNKS
+                              </span>
+                            )}
                           </div>
                         </div>
                         <button
-                          onClick={() => handleDeleteNamespace(ns.id)}
-                          className="w-10 h-10 bg-[#FF006E] text-white flex items-center justify-center border-2 border-black hover:bg-black transition-colors"
+                          onClick={() => handleDeleteNamespace(ns.id, ns.name)}
+                          disabled={deleteMutation.isPending}
+                          className="w-10 h-10 bg-[#FF006E] text-white flex items-center justify-center border-2 border-black hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           style={{ boxShadow: "2px 2px 0px #000000" }}
+                          title={
+                            deletingNamespaceId === ns.id
+                              ? "Deleting..."
+                              : "Delete namespace"
+                          }
                         >
-                          <TrashIcon size={16} />
+                          {deletingNamespaceId === ns.id ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <TrashIcon size={16} />
+                          )}
                         </button>
                       </div>
                     </div>
                     <div className="px-5 py-4 border-t-4 border-black bg-white/50 flex items-center justify-between">
                       <span className="text-xs font-bold text-black/60 uppercase">
-                        {formatDate(ns.createdAt)}
+                        {formatDate(ns.created_at)}
                       </span>
-                      <Link href={`/chat?namespace=${ns.id}`}>
+                      <Link
+                        href={`/chat?namespace=${encodeURIComponent(
+                          ns.name
+                        )}&mode=namespace`}
+                      >
                         <Button variant="secondary" size="sm">
                           💬 CHAT →
                         </Button>
@@ -215,18 +284,32 @@ export default function NamespacesPage() {
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 bg-[#FFFEF0]">
-              <label className="block text-sm font-black text-black uppercase tracking-wide mb-2">
-                NAMESPACE NAME
-              </label>
-              <Input
-                placeholder="Enter a name for your namespace"
-                value={newNamespaceName}
-                onChange={(e) => setNewNamespaceName(e.target.value)}
-                autoFocus
-              />
+            <div className="p-6 bg-[#FFFEF0] space-y-4">
+              <div>
+                <label className="block text-sm font-black text-black uppercase tracking-wide mb-2">
+                  NAMESPACE NAME *
+                </label>
+                <Input
+                  placeholder="e.g., ml_basics, research_papers"
+                  value={newNamespaceName}
+                  onChange={(e) => setNewNamespaceName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-black text-black uppercase tracking-wide mb-2">
+                  DESCRIPTION (OPTIONAL)
+                </label>
+                <Input
+                  placeholder="Brief description of this namespace"
+                  value={newNamespaceDescription}
+                  onChange={(e) => setNewNamespaceDescription(e.target.value)}
+                />
+              </div>
+
               <p
-                className="mt-4 p-3 bg-[#00FFFF] border-2 border-black text-sm font-bold text-black"
+                className="p-3 bg-[#00FFFF] border-2 border-black text-sm font-bold text-black"
                 style={{ boxShadow: "2px 2px 0px #000000" }}
               >
                 💡 NAMESPACES HELP YOU ORGANIZE DOCUMENTS BY PROJECT OR TOPIC.
@@ -235,15 +318,114 @@ export default function NamespacesPage() {
 
             {/* Modal Footer */}
             <div className="flex justify-end gap-3 px-6 py-4 bg-white border-t-4 border-black">
-              <Button variant="ghost" onClick={() => setShowCreateModal(false)}>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setNewNamespaceName("");
+                  setNewNamespaceDescription("");
+                }}
+                disabled={createMutation.isPending}
+              >
                 CANCEL
               </Button>
               <Button
                 variant="primary"
                 onClick={handleCreateNamespace}
-                disabled={!newNamespaceName.trim()}
+                disabled={!newNamespaceName.trim() || createMutation.isPending}
               >
-                CREATE →
+                {createMutation.isPending ? "CREATING..." : "CREATE"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Namespace Confirmation Modal */}
+      {showDeleteModal && namespaceToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div
+            className="bg-white border-4 border-black max-w-md w-full mx-4 animate-slideInUp"
+            style={{ boxShadow: "8px 8px 0px #000000" }}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 bg-[#FF006E] border-b-4 border-black">
+              <h2 className="text-xl font-black text-white uppercase tracking-tight">
+                ⚠️ DELETE NAMESPACE
+              </h2>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setNamespaceToDelete(null);
+                  setDeleteConfirmationName("");
+                }}
+                className="w-10 h-10 bg-black text-white flex items-center justify-center hover:bg-white hover:text-black transition-colors border-2 border-black"
+              >
+                <XIcon size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 bg-[#FFFEF0] space-y-4">
+              <div
+                className="p-4 bg-[#FFFF00] border-4 border-black"
+                style={{ boxShadow: "4px 4px 0px #000000" }}
+              >
+                <p className="text-sm font-black text-black uppercase mb-2">
+                  ⚠️ WARNING: THIS ACTION CANNOT BE UNDONE
+                </p>
+                <p className="text-sm font-bold text-black">
+                  This will permanently delete all documents and vectors in this
+                  namespace.
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm font-bold text-black mb-4">
+                  To confirm deletion, please type the namespace name:
+                </p>
+                <div
+                  className="p-3 bg-[#00FFFF] border-2 border-black mb-4"
+                  style={{ boxShadow: "2px 2px 0px #000000" }}
+                >
+                  <p className="text-lg font-black text-black text-center">
+                    {namespaceToDelete.name}
+                  </p>
+                </div>
+                <Input
+                  placeholder="Type namespace name to confirm"
+                  value={deleteConfirmationName}
+                  onChange={(e) => setDeleteConfirmationName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 px-6 py-4 bg-white border-t-4 border-black">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setNamespaceToDelete(null);
+                  setDeleteConfirmationName("");
+                }}
+                disabled={deletingNamespaceId === namespaceToDelete.id}
+              >
+                CANCEL
+              </Button>
+              <Button
+                variant="primary"
+                onClick={confirmDeleteNamespace}
+                disabled={
+                  deleteConfirmationName !== namespaceToDelete.name ||
+                  deletingNamespaceId === namespaceToDelete.id
+                }
+                className="bg-[#FF006E] hover:bg-black"
+              >
+                {deletingNamespaceId === namespaceToDelete.id
+                  ? "DELETING..."
+                  : "DELETE NAMESPACE"}
               </Button>
             </div>
           </div>

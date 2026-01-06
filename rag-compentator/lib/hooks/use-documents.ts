@@ -1,73 +1,100 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../api-client";
-import { Document, UploadSettings } from "../types";
+import { Document, DocumentDetail, UploadSettings } from "../types";
 import { namespaceKeys } from "./use-namespaces";
+import { useState } from "react";
 
-// Query Keys
+// Query Keys - Efficient key factory pattern
 export const documentKeys = {
   all: ["documents"] as const,
   lists: () => [...documentKeys.all, "list"] as const,
-  list: (namespaceId?: string) =>
-    [...documentKeys.lists(), namespaceId] as const,
+  list: (filters?: {
+    namespace?: string;
+    namespace_id?: string;
+    page?: number;
+  }) => [...documentKeys.lists(), filters] as const,
   details: () => [...documentKeys.all, "detail"] as const,
   detail: (id: string) => [...documentKeys.details(), id] as const,
 };
 
 // ============================================
-// GET DOCUMENTS (from NeonDB via Next.js API)
+// GET DOCUMENTS LIST
 // ============================================
-export function useDocuments(namespaceId?: string) {
+export function useDocuments(
+  namespace?: string,
+  options?: { page?: number; limit?: number }
+) {
   return useQuery({
-    queryKey: documentKeys.list(namespaceId),
+    queryKey: documentKeys.list({ namespace, page: options?.page }),
     queryFn: async () => {
-      // Use NeonDB API route for fast listing
-      const url = namespaceId
-        ? `/api/neon/documents?namespace=${encodeURIComponent(namespaceId)}`
-        : "/api/neon/documents";
-
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch documents from NeonDB");
-      }
-
-      return response.json() as Promise<Document[]>;
+      const response = await apiClient.getDocuments({
+        namespace,
+        page: options?.page,
+        limit: options?.limit,
+      });
+      // Extract documents array from response
+      return response.documents;
     },
-    staleTime: 30 * 1000,
-    // Enable always, not just when namespace is provided
-    // This allows listing all documents
+    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
   });
 }
 
 // ============================================
-// GET SINGLE DOCUMENT
+// GET DOCUMENTS WITH PAGINATION
+// ============================================
+export function useDocumentsPaginated(
+  namespace?: string,
+  page: number = 1,
+  limit: number = 10
+) {
+  return useQuery({
+    queryKey: documentKeys.list({ namespace, page }),
+    queryFn: () => apiClient.getDocuments({ namespace, page, limit }),
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    placeholderData: (previousData) => previousData, // Keep previous data while loading
+  });
+}
+
+// ============================================
+// GET SINGLE DOCUMENT DETAIL
 // ============================================
 export function useDocument(id: string) {
   return useQuery({
     queryKey: documentKeys.detail(id),
     queryFn: () => apiClient.getDocument(id),
     enabled: !!id,
+    staleTime: 60 * 1000, // Details stay fresh longer
   });
 }
 
 // ============================================
-// UPLOAD DOCUMENT
+// UPLOAD DOCUMENT WITH PROGRESS TRACKING
 // ============================================
 export function useUploadDocument() {
   const queryClient = useQueryClient();
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  return useMutation({
-    mutationFn: ({
+  const mutation = useMutation({
+    mutationFn: async ({
       file,
       settings,
     }: {
       file: File;
       settings: UploadSettings;
-    }) => apiClient.uploadDocument(file, settings),
+    }) => {
+      setUploadProgress(0);
+      return apiClient.uploadDocument(file, settings, (progress) => {
+        setUploadProgress(progress);
+      });
+    },
     onSuccess: (data, variables) => {
       // Invalidate documents list for this namespace
       queryClient.invalidateQueries({
-        queryKey: documentKeys.list(variables.settings.pinecone_namespace),
+        queryKey: documentKeys.list({
+          namespace: variables.settings.pinecone_namespace,
+        }),
       });
 
       // Invalidate all documents list
@@ -79,8 +106,20 @@ export function useUploadDocument() {
       queryClient.invalidateQueries({
         queryKey: namespaceKeys.lists(),
       });
+
+      // Reset progress
+      setUploadProgress(0);
+    },
+    onError: () => {
+      // Reset progress on error
+      setUploadProgress(0);
     },
   });
+
+  return {
+    ...mutation,
+    uploadProgress,
+  };
 }
 
 // ============================================
@@ -92,21 +131,16 @@ export function useDeleteDocument() {
   return useMutation({
     mutationFn: (id: string) => apiClient.deleteDocument(id),
     onMutate: async (id) => {
-      // Cancel outgoing queries
+      // Cancel outgoing queries to prevent race conditions
       await queryClient.cancelQueries({ queryKey: documentKeys.lists() });
 
-      // Snapshot previous values for all namespace lists
-      const previousData = new Map();
-      const allQueries = queryClient.getQueriesData<Document[]>({
+      // Snapshot previous values
+      const previousLists = queryClient.getQueriesData<Document[]>({
         queryKey: documentKeys.lists(),
       });
 
-      allQueries.forEach(([queryKey, data]) => {
-        previousData.set(queryKey, data);
-      });
-
-      // Optimistically remove from all lists
-      allQueries.forEach(([queryKey, data]) => {
+      // Optimistically remove from all cached lists
+      previousLists.forEach(([queryKey, data]) => {
         if (data) {
           queryClient.setQueryData<Document[]>(
             queryKey,
@@ -115,20 +149,24 @@ export function useDeleteDocument() {
         }
       });
 
-      return { previousData };
+      return { previousLists };
     },
     onError: (err, id, context) => {
-      // Rollback
-      if (context?.previousData) {
-        context.previousData.forEach((data, queryKey) => {
+      // Rollback on error
+      if (context?.previousLists) {
+        context.previousLists.forEach(([queryKey, data]) => {
           queryClient.setQueryData(queryKey, data);
         });
       }
     },
-    onSuccess: () => {
-      // Refetch everything to be sure
-      queryClient.invalidateQueries({ queryKey: documentKeys.all });
+    onSuccess: (data) => {
+      // Invalidate to refetch with accurate counts
+      queryClient.invalidateQueries({ queryKey: documentKeys.lists() });
       queryClient.invalidateQueries({ queryKey: namespaceKeys.lists() });
+
+      console.log(
+        `✅ Document deleted: ${data.vectors_deleted} vectors removed`
+      );
     },
   });
 }

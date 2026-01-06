@@ -16,74 +16,36 @@ import {
   FileTextIcon,
   TrashIcon,
   SearchIcon,
+  XIcon,
 } from "@/components/ui/Icons";
 import { Document, Namespace, UploadSettings } from "@/lib/types";
 import { formatDate } from "@/lib/api";
+import { useNamespaces } from "@/lib/hooks/use-namespaces";
+import {
+  useDocuments,
+  useUploadDocument,
+  useDeleteDocument,
+} from "@/lib/hooks/use-documents";
 import Link from "next/link";
-
-// Mock data
-const mockNamespaces: Namespace[] = [
-  { id: "ns1", name: "cn_unit5", documentCount: 5, createdAt: "2025-12-01" },
-  { id: "ns2", name: "ml_basics", documentCount: 3, createdAt: "2025-12-15" },
-  {
-    id: "ns3",
-    name: "research_papers",
-    documentCount: 8,
-    createdAt: "2025-12-20",
-  },
-];
-
-const mockDocuments: Document[] = [
-  {
-    id: "doc1",
-    name: "Computer_Networks_Unit5.pdf",
-    pageCount: 23,
-    fileSize: "1.2 MB",
-    uploadedAt: "2025-01-01",
-    namespace: "ns1",
-  },
-  {
-    id: "doc2",
-    name: "Networking_Basics.pdf",
-    pageCount: 45,
-    fileSize: "2.5 MB",
-    uploadedAt: "2024-12-29",
-    namespace: "ns1",
-  },
-  {
-    id: "doc3",
-    name: "TCP_IP_Protocol.pdf",
-    pageCount: 32,
-    fileSize: "1.8 MB",
-    uploadedAt: "2024-12-25",
-    namespace: "ns1",
-  },
-  {
-    id: "doc4",
-    name: "Machine_Learning_Intro.pdf",
-    pageCount: 56,
-    fileSize: "3.1 MB",
-    uploadedAt: "2024-12-20",
-    namespace: "ns2",
-  },
-  {
-    id: "doc5",
-    name: "Neural_Networks.pdf",
-    pageCount: 28,
-    fileSize: "1.5 MB",
-    uploadedAt: "2024-12-15",
-    namespace: "ns2",
-  },
-];
 
 export default function DocumentsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedNamespace, setSelectedNamespace] = useState<string>("all");
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [documents, setDocuments] = useState(mockDocuments);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(
+    null
+  );
 
-  const namespaces = mockNamespaces;
+  // Use real data from React Query hooks
+  const { data: namespaces = [], isLoading: namespacesLoading } =
+    useNamespaces();
+  const { data: documents = [], isLoading: documentsLoading } = useDocuments(
+    selectedNamespace === "all" ? undefined : selectedNamespace
+  );
+  const uploadMutation = useUploadDocument();
+  const deleteMutation = useDeleteDocument();
 
   const filteredDocuments = documents.filter((doc) => {
     const matchesSearch = doc.name
@@ -94,26 +56,38 @@ export default function DocumentsPage() {
     return matchesSearch && matchesNamespace;
   });
 
-  const handleDeleteDocument = (docId: string) => {
-    if (confirm("Are you sure you want to delete this document?")) {
-      setDocuments(documents.filter((doc) => doc.id !== docId));
+  const handleUpload = async (file: File, settings: UploadSettings) => {
+    try {
+      const response = await uploadMutation.mutateAsync({ file, settings });
+      // Don't close modal here - let UploadModal show success screen
+      // Modal will close when user clicks action buttons
+      console.log("Upload successful:", response);
+      return response;
+    } catch (error) {
+      console.error("Upload failed:", error);
+      throw error;
     }
   };
 
-  const handleUpload = async (
-    file: File,
-    settings: UploadSettings
-  ) => {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    const newDoc: Document = {
-      id: `doc${Date.now()}`,
-      name: file.name,
-      pageCount: Math.floor(Math.random() * 50) + 10,
-      fileSize: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-      uploadedAt: new Date().toISOString(),
-      namespace: settings.pinecone_namespace,
-    };
-    setDocuments([newDoc, ...documents]);
+  const handleDeleteDocument = async (docId: string) => {
+    const document = documents.find((doc) => doc.id === docId);
+    if (!document) return;
+
+    setDocumentToDelete(document);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteDocument = async () => {
+    if (!documentToDelete) return;
+
+    try {
+      await deleteMutation.mutateAsync(documentToDelete.id);
+      setShowDeleteModal(false);
+      setDocumentToDelete(null);
+    } catch (error) {
+      console.error("Delete failed:", error);
+      alert("Failed to delete document. Please try again.");
+    }
   };
 
   const getNamespaceName = (nsId: string) => {
@@ -190,7 +164,7 @@ export default function DocumentsPage() {
 
             {/* Documents Table */}
             {filteredDocuments.length === 0 ? (
-              <Card variant="white" className="p-8">
+              <Card color="white" className="p-8">
                 <EmptyState
                   icon={<FileTextIcon size={48} />}
                   title="NO DOCUMENTS FOUND"
@@ -270,17 +244,23 @@ export default function DocumentsPage() {
                             </Badge>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-black">
-                            {doc.pageCount}
+                            {doc.page_count}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-black">
-                            {doc.fileSize}
+                            {doc.file_size}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-black/70">
-                            {formatDate(doc.uploadedAt)}
+                            {formatDate(doc.uploaded_at)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <Link href={`/chat?document=${doc.id}`}>
+                              <Link
+                                href={`/chat?namespace=${encodeURIComponent(
+                                  doc.namespace
+                                )}&mode=single&documentId=${encodeURIComponent(
+                                  doc.id
+                                )}`}
+                              >
                                 <Button variant="secondary" size="sm">
                                   💬 CHAT
                                 </Button>
@@ -314,7 +294,92 @@ export default function DocumentsPage() {
         currentNamespace={
           selectedNamespace !== "all" ? selectedNamespace : undefined
         }
+        uploadProgress={uploadMutation.uploadProgress}
       />
+
+      {/* Delete Document Confirmation Modal */}
+      {showDeleteModal && documentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div
+            className="bg-white border-4 border-black max-w-md w-full mx-4 animate-slideInUp"
+            style={{ boxShadow: "8px 8px 0px #000000" }}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 bg-[#FF006E] border-b-4 border-black">
+              <h2 className="text-xl font-black text-white uppercase tracking-tight">
+                ⚠️ DELETE DOCUMENT
+              </h2>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDocumentToDelete(null);
+                }}
+                className="w-10 h-10 bg-black text-white flex items-center justify-center hover:bg-white hover:text-black transition-colors border-2 border-black"
+              >
+                <XIcon size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 bg-[#FFFEF0] space-y-4">
+              <div
+                className="p-4 bg-[#FFFF00] border-4 border-black"
+                style={{ boxShadow: "4px 4px 0px #000000" }}
+              >
+                <p className="text-sm font-black text-black uppercase mb-2">
+                  ⚠️ WARNING: THIS ACTION CANNOT BE UNDONE
+                </p>
+                <p className="text-sm font-bold text-black">
+                  This will permanently delete the document and all associated
+                  vectors from Pinecone.
+                </p>
+              </div>
+
+              <div
+                className="p-4 bg-white border-2 border-black"
+                style={{ boxShadow: "2px 2px 0px #000000" }}
+              >
+                <p className="text-xs font-black text-black uppercase mb-1">
+                  DOCUMENT:
+                </p>
+                <p className="text-lg font-black text-black">
+                  {documentToDelete.name}
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <Badge variant="info">
+                    {getNamespaceName(documentToDelete.namespace).toUpperCase()}
+                  </Badge>
+                  <Badge variant="default">
+                    {documentToDelete.page_count} PAGES
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 px-6 py-4 bg-white border-t-4 border-black">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDocumentToDelete(null);
+                }}
+                disabled={deleteMutation.isPending}
+              >
+                CANCEL
+              </Button>
+              <Button
+                variant="primary"
+                onClick={confirmDeleteDocument}
+                disabled={deleteMutation.isPending}
+                className="bg-[#FF006E] hover:bg-black"
+              >
+                {deleteMutation.isPending ? "DELETING..." : "DELETE DOCUMENT"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

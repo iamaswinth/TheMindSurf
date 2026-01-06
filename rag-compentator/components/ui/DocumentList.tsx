@@ -143,7 +143,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({
                       : "text-black/60"
                   }`}
                 >
-                  {doc.pageCount} PAGES • {formatDate(doc.uploadedAt)}
+                  {doc.page_count} PAGES • {formatDate(doc.uploaded_at)}
                 </p>
               </div>
             </div>

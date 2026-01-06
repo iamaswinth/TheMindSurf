@@ -5,76 +5,47 @@ import { Sidebar } from "@/components/ui/Sidebar";
 import { ModeSelector, ModeBadge } from "@/components/ui/ModeSelector";
 import { DocumentList } from "@/components/ui/DocumentList";
 import { UploadModal } from "@/components/ui/UploadModal";
-import { Button, Card, Select } from "@/components/ui/Components";
-import { PlusIcon, ChevronRightIcon, MenuIcon } from "@/components/ui/Icons";
-import { ChatMode, Document, Namespace, UploadSettings } from "@/lib/types";
+import { Button, Card, Select, Input } from "@/components/ui/Components";
+import {
+  PlusIcon,
+  ChevronRightIcon,
+  MenuIcon,
+  XIcon,
+  FolderIcon,
+} from "@/components/ui/Icons";
+import {
+  ChatMode,
+  Document,
+  Namespace,
+  UploadSettings,
+  MultimodalProcessResponse,
+} from "@/lib/types";
 import Link from "next/link";
-
-// Mock data for demonstration
-const mockNamespaces: Namespace[] = [
-  { id: "ns1", name: "cn_unit5", documentCount: 5, createdAt: "2025-12-01" },
-  { id: "ns2", name: "ml_basics", documentCount: 3, createdAt: "2025-12-15" },
-  {
-    id: "ns3",
-    name: "research_papers",
-    documentCount: 8,
-    createdAt: "2025-12-20",
-  },
-];
-
-const mockDocuments: Document[] = [
-  {
-    id: "doc1",
-    name: "Computer_Networks_Unit5.pdf",
-    pageCount: 23,
-    fileSize: "1.2 MB",
-    uploadedAt: "2025-01-01",
-    namespace: "ns1",
-  },
-  {
-    id: "doc2",
-    name: "Networking_Basics.pdf",
-    pageCount: 45,
-    fileSize: "2.5 MB",
-    uploadedAt: "2024-12-29",
-    namespace: "ns1",
-  },
-  {
-    id: "doc3",
-    name: "TCP_IP_Protocol.pdf",
-    pageCount: 32,
-    fileSize: "1.8 MB",
-    uploadedAt: "2024-12-25",
-    namespace: "ns1",
-  },
-  {
-    id: "doc4",
-    name: "Network_Security.pdf",
-    pageCount: 56,
-    fileSize: "3.1 MB",
-    uploadedAt: "2024-12-20",
-    namespace: "ns1",
-  },
-  {
-    id: "doc5",
-    name: "Wireless_Networks.pdf",
-    pageCount: 28,
-    fileSize: "1.5 MB",
-    uploadedAt: "2024-12-15",
-    namespace: "ns1",
-  },
-];
+import { useNamespaces, useCreateNamespace } from "@/lib/hooks/use-namespaces";
+import { useDocuments, useUploadDocument } from "@/lib/hooks/use-documents";
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [selectedNamespace, setSelectedNamespace] = useState<string>("ns1");
+  const [selectedNamespace, setSelectedNamespace] = useState<string>("");
   const [chatMode, setChatMode] = useState<ChatMode>("namespace");
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showCreateNamespaceModal, setShowCreateNamespaceModal] =
+    useState(false);
+  const [newNamespaceName, setNewNamespaceName] = useState("");
+  const [newNamespaceDescription, setNewNamespaceDescription] = useState("");
 
-  const namespaces = mockNamespaces;
-  const documents = mockDocuments.filter(
-    (d) => d.namespace === selectedNamespace
+  // Use real data from React Query hooks
+  const { data: namespaces = [] } = useNamespaces();
+  const { data: documents = [] } = useDocuments(
+    selectedNamespace === "all" || !selectedNamespace
+      ? undefined
+      : selectedNamespace
+  );
+  const uploadMutation = useUploadDocument();
+  const createNamespaceMutation = useCreateNamespace();
+  const currentNamespace = namespaces.find(
+    (ns) => ns.name === selectedNamespace
   );
 
   const handleSelectDocument = (docId: string) => {
@@ -101,17 +72,34 @@ export default function DashboardPage() {
   const handleUpload = async (
     file: File,
     settings: UploadSettings
-  ) => {
-    // Simulate upload
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    console.log(
-      "Uploading:",
-      file.name,
-      "to namespace:",
-      settings.pinecone_namespace,
-      "with settings:",
-      settings
-    );
+  ): Promise<MultimodalProcessResponse> => {
+    try {
+      const response = await uploadMutation.mutateAsync({ file, settings });
+      // Don't close modal here - let UploadModal show success screen
+      // Modal will close when user clicks action buttons
+      console.log("Upload successful:", response);
+      return response;
+    } catch (error) {
+      console.error("Upload failed:", error);
+      throw error;
+    }
+  };
+
+  const handleCreateNamespace = async () => {
+    if (newNamespaceName.trim()) {
+      try {
+        const newNamespace = await createNamespaceMutation.mutateAsync({
+          name: newNamespaceName.trim(),
+          description: newNamespaceDescription.trim() || undefined,
+        });
+        setNewNamespaceName("");
+        setNewNamespaceDescription("");
+        setShowCreateNamespaceModal(false);
+        setSelectedNamespace(newNamespace.name);
+      } catch (error) {
+        console.error("Failed to create namespace:", error);
+      }
+    }
   };
 
   const canStartChat = () => {
@@ -149,8 +137,7 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-black text-black uppercase tracking-tight">
               DASHBOARD
             </h1>
-          </div>
-
+        </div>
           <div className="flex items-center gap-4">
             <ModeBadge
               mode={chatMode}
@@ -166,18 +153,27 @@ export default function DashboardPage() {
           <div className="max-w-5xl mx-auto space-y-8">
             {/* Namespace Selector */}
             <Card className="p-6" color="white">
-              <h2 className="text-xl font-black text-black mb-4 uppercase tracking-tight flex items-center gap-2">
-                <span className="inline-block w-4 h-4 bg-[#00FFFF] border-2 border-black"></span>
-                SELECT NAMESPACE
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-black text-black uppercase tracking-tight flex items-center gap-2">
+                  <span className="inline-block w-4 h-4 bg-[#00FFFF] border-2 border-black"></span>
+                  SELECT NAMESPACE
+                </h2>
+                <Button
+                  variant="primary"
+                  leftIcon={<PlusIcon size={16} />}
+                  onClick={() => setShowCreateNamespaceModal(true)}
+                >
+                  NEW
+                </Button>
+              </div>
               <Select
                 options={namespaces.map((ns) => ({
-                  value: ns.id,
-                  label: `${ns.name} (${ns.documentCount} documents)`,
+                  value: ns.name,
+                  label: `${ns.name} (${ns.document_count} documents)`,
                 }))}
                 value={selectedNamespace}
                 onChange={setSelectedNamespace}
-                placeholder="Select or create namespace"
+                placeholder="Select a namespace"
               />
             </Card>
 
@@ -218,7 +214,21 @@ export default function DashboardPage() {
 
             {/* Start Chat Button */}
             <div className="flex justify-end">
-              <Link href="/chat">
+              <Link
+                href={`/chat?namespace=${encodeURIComponent(
+                  selectedNamespace
+                )}&mode=${chatMode}${
+                  chatMode === "single" && selectedDocuments.length === 1
+                    ? `&documentId=${encodeURIComponent(selectedDocuments[0])}`
+                    : ""
+                }${
+                  chatMode === "multi" && selectedDocuments.length > 0
+                    ? `&documentIds=${encodeURIComponent(
+                        selectedDocuments.join(",")
+                      )}`
+                    : ""
+                }`}
+              >
                 <Button
                   variant="primary"
                   size="lg"
@@ -239,8 +249,81 @@ export default function DashboardPage() {
         onClose={() => setShowUploadModal(false)}
         onUpload={handleUpload}
         namespaces={namespaces}
-        currentNamespace={selectedNamespace}
+        currentNamespace={currentNamespace?.name}
+        uploadProgress={uploadMutation.uploadProgress}
       />
+
+      {/* Create Namespace Modal */}
+      {showCreateNamespaceModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div
+            className="bg-white border-4 border-black max-w-md w-full animate-slideInUp"
+            style={{ boxShadow: "8px 8px 0px #000000" }}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 bg-[#00FFFF] border-b-4 border-black">
+              <h2 className="text-xl font-black text-black uppercase tracking-tight flex items-center gap-2">
+                <FolderIcon size={24} />
+                CREATE NAMESPACE
+              </h2>
+              <button
+                onClick={() => {
+                  setShowCreateNamespaceModal(false);
+                  setNewNamespaceName("");
+                  setNewNamespaceDescription("");
+                }}
+                className="w-10 h-10 bg-black text-white flex items-center justify-center hover:bg-[#FF006E] transition-colors border-2 border-black"
+              >
+                <XIcon size={20} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 bg-[#FFFEF0] space-y-4">
+              <Input
+                label="Namespace Name"
+                placeholder="e.g., medical-docs, research-papers"
+                value={newNamespaceName}
+                onChange={(e) => setNewNamespaceName(e.target.value)}
+                required
+              />
+              <Input
+                label="Description (Optional)"
+                placeholder="Brief description of this namespace"
+                value={newNamespaceDescription}
+                onChange={(e) => setNewNamespaceDescription(e.target.value)}
+              />
+              <p className="text-xs font-bold text-black/60">
+                Namespaces help organize your documents into collections.
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-3 px-6 py-4 bg-white border-t-4 border-black">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setShowCreateNamespaceModal(false);
+                  setNewNamespaceName("");
+                  setNewNamespaceDescription("");
+                }}
+              >
+                CANCEL
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleCreateNamespace}
+                disabled={
+                  !newNamespaceName.trim() || createNamespaceMutation.isPending
+                }
+                leftIcon={<PlusIcon size={16} />}
+              >
+                {createNamespaceMutation.isPending ? "CREATING..." : "CREATE"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

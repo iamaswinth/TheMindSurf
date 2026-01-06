@@ -17,7 +17,7 @@ const spaceMono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RAG CHAT // DOCUMENT INTELLIGENCE",
+  title: "TheMindSurf",
   description:
     "Chat with your documents using AI-powered RAG - Neo-Brutalist Edition",
 };

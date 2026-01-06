@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { ModeSelector, ModeBadge } from "@/components/ui/ModeSelector";
 import { DocumentListCompact } from "@/components/ui/DocumentList";
@@ -12,127 +13,45 @@ import {
   PlusIcon,
   ClipboardIcon,
   ChevronDownIcon,
+  TrashIcon,
 } from "@/components/ui/Icons";
 import {
   ChatMode,
-  Document,
-  Namespace,
   Message,
   Source,
   ChatSettings,
   UploadSettings,
+  MultimodalProcessResponse,
 } from "@/lib/types";
 import { generateId } from "@/lib/api";
-
-// Mock data
-const mockNamespaces: Namespace[] = [
-  { id: "ns1", name: "cn_unit5", documentCount: 5, createdAt: "2025-12-01" },
-  { id: "ns2", name: "ml_basics", documentCount: 3, createdAt: "2025-12-15" },
-];
-
-const mockDocuments: Document[] = [
-  {
-    id: "doc1",
-    name: "Computer_Networks_Unit5.pdf",
-    pageCount: 23,
-    fileSize: "1.2 MB",
-    uploadedAt: "2025-01-01",
-    namespace: "ns1",
-  },
-  {
-    id: "doc2",
-    name: "Networking_Basics.pdf",
-    pageCount: 45,
-    fileSize: "2.5 MB",
-    uploadedAt: "2024-12-29",
-    namespace: "ns1",
-  },
-  {
-    id: "doc3",
-    name: "TCP_IP_Protocol.pdf",
-    pageCount: 32,
-    fileSize: "1.8 MB",
-    uploadedAt: "2024-12-25",
-    namespace: "ns1",
-  },
-  {
-    id: "doc4",
-    name: "Network_Security.pdf",
-    pageCount: 56,
-    fileSize: "3.1 MB",
-    uploadedAt: "2024-12-20",
-    namespace: "ns1",
-  },
-  {
-    id: "doc5",
-    name: "Wireless_Networks.pdf",
-    pageCount: 28,
-    fileSize: "1.5 MB",
-    uploadedAt: "2024-12-15",
-    namespace: "ns1",
-  },
-];
-
-// Mock response function
-const getMockResponse = (
-  question: string
-): { answer: string; sources: Source[] } => {
-  return {
-    answer: `Based on the documents in your namespace, I found relevant information about "${question}".
-
-DHCP (Dynamic Host Configuration Protocol) is a network management protocol used to automate the process of configuring devices on IP networks. It enables devices to use network services such as DNS, NTP, and any communication protocol based on UDP or TCP.
-
-The protocol operates based on a client-server model where:
-1. The DHCP client sends a broadcast message to discover available servers
-2. DHCP servers respond with an offer containing configuration parameters
-3. The client requests the configuration from one server
-4. The server acknowledges and provides the IP address lease
-
-This information was found across multiple sources in your documents.`,
-    sources: [
-      {
-        document_name: "Computer_Networks_Unit5.pdf",
-        document_id: "doc1",
-        page_number: 23,
-        chunk_text:
-          "DHCP (Dynamic Host Configuration Protocol) is a client/server protocol that automatically provides an Internet Protocol (IP) host with its IP address and other related configuration information such as the subnet mask and default gateway.",
-        score: 0.89,
-      },
-      {
-        document_name: "Networking_Basics.pdf",
-        document_id: "doc2",
-        page_number: 45,
-        chunk_text:
-          "The DHCP process consists of four steps: Discovery, Offer, Request, and Acknowledge (DORA). This process ensures that IP addresses are assigned dynamically and efficiently across the network.",
-        score: 0.76,
-      },
-      {
-        document_name: "TCP_IP_Protocol.pdf",
-        document_id: "doc3",
-        page_number: 12,
-        chunk_text:
-          "DHCP uses UDP as its transport protocol. DHCP messages from a client to a server are sent to the DHCP server port 67, and messages from a server to a client are sent to the DHCP client port 68.",
-        score: 0.65,
-      },
-    ],
-  };
-};
+import { useNamespaces } from "@/lib/hooks/use-namespaces";
+import { useDocuments, useUploadDocument } from "@/lib/hooks/use-documents";
+import {
+  useChat,
+  validateChatMode,
+  createUserMessage,
+  createLoadingMessage,
+} from "@/lib/hooks/use-chat";
 
 export default function ChatPage() {
+  const searchParams = useSearchParams();
   // UI State
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sourcesPanelOpen, setSourcesPanelOpen] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showNamespaceDropdown, setShowNamespaceDropdown] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   // Data State
-  const [selectedNamespace, setSelectedNamespace] = useState<string>("ns1");
+  const [selectedNamespace, setSelectedNamespace] = useState<string>("");
   const [chatMode, setChatMode] = useState<ChatMode>("namespace");
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeSource, setActiveSource] = useState<Source | null>(null);
-  const [allSources, setAllSources] = useState<Source[]>([]);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
+    null
+  );
 
   // Settings State
   const [chatSettings, setChatSettings] = useState<ChatSettings>({
@@ -143,62 +62,171 @@ export default function ChatPage() {
     streamResponses: false,
   });
 
-  const namespaces = mockNamespaces;
-  const documents = mockDocuments.filter(
-    (d) => d.namespace === selectedNamespace
+  // Use real data from React Query hooks
+  const { data: namespaces = [] } = useNamespaces();
+  const { data: documents = [] } = useDocuments(
+    selectedNamespace === "all" || !selectedNamespace
+      ? undefined
+      : selectedNamespace
   );
-  const currentNamespace = namespaces.find((ns) => ns.id === selectedNamespace);
+  const uploadMutation = useUploadDocument();
+  const currentNamespace = namespaces.find(
+    (ns) => ns.name === selectedNamespace
+  );
 
-  const handleSendMessage = useCallback(async (content: string) => {
-    const userMessage: Message = {
-      id: generateId(),
-      role: "user",
-      content,
-      timestamp: new Date().toISOString(),
-    };
+  // Auto-configure from URL parameters on mount
+  useEffect(() => {
+    const namespace = searchParams.get("namespace");
+    const mode = searchParams.get("mode") as ChatMode;
+    const documentId = searchParams.get("documentId");
+    const documentIds = searchParams.get("documentIds");
 
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
+    if (namespace) {
+      setSelectedNamespace(namespace);
+    }
 
-    // Add loading message
-    const loadingMessage: Message = {
-      id: generateId(),
-      role: "assistant",
-      content: "",
-      timestamp: new Date().toISOString(),
-      isLoading: true,
-    };
-    setMessages((prev) => [...prev, loadingMessage]);
+    if (mode && ["namespace", "single", "multi"].includes(mode)) {
+      setChatMode(mode);
+    }
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    if (mode === "single" && documentId) {
+      setSelectedDocuments([documentId]);
+    } else if (mode === "multi" && documentIds) {
+      setSelectedDocuments(documentIds.split(","));
+    }
+  }, [searchParams]);
 
-    const response = getMockResponse(content);
-
-    // Update with actual response
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === loadingMessage.id
-          ? {
-              ...msg,
-              content: response.answer,
-              sources: response.sources,
-              isLoading: false,
-            }
-          : msg
-      )
-    );
-
-    setAllSources((prev) => [...response.sources, ...prev]);
-    setIsLoading(false);
+  // Load messages from localStorage on mount
+  useEffect(() => {
+    const savedMessages = localStorage.getItem("chatMessages");
+    if (savedMessages) {
+      try {
+        const parsed = JSON.parse(savedMessages);
+        setMessages(parsed);
+      } catch (error) {
+        console.error("Failed to load messages from localStorage:", error);
+      }
+    }
   }, []);
 
-  const handleSourceClick = (source: Source) => {
-    setActiveSource(source);
-    if (!sourcesPanelOpen) {
-      setSourcesPanelOpen(true);
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem("chatMessages", JSON.stringify(messages));
     }
-  };
+  }, [messages]);
+
+  // Get document ID for single mode or document IDs for multi mode
+  const singleDocumentId =
+    chatMode === "single" && selectedDocuments.length === 1
+      ? selectedDocuments[0]
+      : undefined;
+  const multiDocumentIds =
+    chatMode === "multi" && selectedDocuments.length > 0
+      ? selectedDocuments
+      : undefined;
+
+  // Chat hook with callbacks
+  const chatHook = useChat({
+    mode: chatMode,
+    namespaceId: currentNamespace?.id,
+    documentId: singleDocumentId,
+    documentIds: multiDocumentIds,
+    onMessage: useCallback((message: Message) => {
+      // Update or add the assistant message
+      setMessages((prev) => {
+        const existingIndex = prev.findIndex((m) => m.id === message.id);
+        if (existingIndex >= 0) {
+          // Update existing message (for streaming)
+          return prev.map((m, i) => (i === existingIndex ? message : m));
+        }
+        // Replace loading message or add new
+        const loadingIndex = prev.findIndex((m) => m.isLoading);
+        if (loadingIndex >= 0) {
+          return prev.map((m, i) => (i === loadingIndex ? message : m));
+        }
+        return [...prev, message];
+      });
+
+      // Auto-select the latest AI message with sources to show in panel
+      if (
+        message.sources &&
+        message.sources.length > 0 &&
+        !message.isStreaming
+      ) {
+        setSelectedMessageId(message.id);
+      }
+    }, []),
+    onError: useCallback((error: Error) => {
+      console.error("Chat error:", error);
+      setChatError(error.message);
+      setIsLoading(false);
+
+      // Remove loading message on error
+      setMessages((prev) => prev.filter((m) => !m.isLoading));
+    }, []),
+    onStreamEnd: useCallback(() => {
+      setIsLoading(false);
+    }, []),
+  });
+
+  const handleSendMessage = useCallback(
+    async (content: string) => {
+      // Validate mode configuration
+      const validation = validateChatMode(
+        chatMode,
+        currentNamespace?.id,
+        singleDocumentId,
+        multiDocumentIds
+      );
+
+      if (!validation.valid) {
+        setChatError(validation.error || "Invalid chat configuration");
+        return;
+      }
+
+      setChatError(null);
+
+      // Add user message
+      const userMessage = createUserMessage(content);
+      setMessages((prev) => [...prev, userMessage]);
+      setIsLoading(true);
+
+      // Add loading message
+      const loadingMessage = createLoadingMessage();
+      setMessages((prev) => [...prev, loadingMessage]);
+
+      try {
+        // Use streaming if enabled, otherwise regular
+        if (chatSettings.streamResponses) {
+          await chatHook.sendStreamingMessage(content, chatSettings);
+        } else {
+          await chatHook.sendMessageAsync(content, chatSettings);
+        }
+      } catch (error) {
+        console.error("Send message failed:", error);
+        // Error handling is done in onError callback
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [
+      chatMode,
+      currentNamespace?.id,
+      singleDocumentId,
+      multiDocumentIds,
+      chatSettings,
+      chatHook,
+    ]
+  );
+
+  const handleResetChat = useCallback(() => {
+    setMessages([]);
+    setSelectedMessageId(null);
+    setActiveSource(null);
+    localStorage.removeItem("chatMessages");
+    setChatError(null);
+  }, []);
 
   const handleToggleDocument = (docId: string) => {
     if (chatMode === "single") {
@@ -222,16 +250,17 @@ export default function ChatPage() {
   const handleUpload = async (
     file: File,
     settings: UploadSettings
-  ) => {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    console.log(
-      "Uploading:",
-      file.name,
-      "to namespace:",
-      settings.pinecone_namespace,
-      "with settings:",
-      settings
-    );
+  ): Promise<MultimodalProcessResponse> => {
+    try {
+      const response = await uploadMutation.mutateAsync({ file, settings });
+      // Don't close modal here - let UploadModal show success screen
+      // Modal will close when user clicks action buttons
+      console.log("Upload successful:", response);
+      return response;
+    } catch (error) {
+      console.error("Upload failed:", error);
+      throw error;
+    }
   };
 
   const getSelectedDocumentName = () => {
@@ -269,7 +298,7 @@ export default function ChatPage() {
                   <button
                     key={ns.id}
                     onClick={() => {
-                      setSelectedNamespace(ns.id);
+                      setSelectedNamespace(ns.name);
                       setShowNamespaceDropdown(false);
                     }}
                     className={`
@@ -361,14 +390,27 @@ export default function ChatPage() {
           </div>
 
           {/* Right side */}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setSourcesPanelOpen(!sourcesPanelOpen)}
-            className={sourcesPanelOpen ? "bg-[#00FFFF]" : ""}
-          >
-            SOURCES
-          </Button>
+          <div className="flex items-center gap-2">
+            {messages.length > 0 && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleResetChat}
+                className="bg-[#FF006E] hover:bg-[#FF006E]/90"
+                leftIcon={<TrashIcon size={16} />}
+              >
+                CLEAR CHAT
+              </Button>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setSourcesPanelOpen(!sourcesPanelOpen)}
+              className={sourcesPanelOpen ? "bg-[#00FFFF]" : ""}
+            >
+              SOURCES
+            </Button>
+          </div>
         </header>
 
         {/* Chat Area */}
@@ -376,19 +418,38 @@ export default function ChatPage() {
           <div className="flex-1 p-4">
             <ChatArea
               messages={messages}
-              isLoading={isLoading}
+              isLoading={
+                isLoading || chatHook.isLoading || chatHook.isStreaming
+              }
               settings={chatSettings}
               onSendMessage={handleSendMessage}
-              onSourceClick={handleSourceClick}
               onUpdateSettings={(updates) =>
                 setChatSettings((prev) => ({ ...prev, ...updates }))
               }
+              onMessageClick={(message) => {
+                // Toggle selection - clicking same message deselects
+                if (selectedMessageId === message.id) {
+                  setSelectedMessageId(null);
+                  setActiveSource(null);
+                } else {
+                  setSelectedMessageId(message.id);
+                  setActiveSource(null);
+                }
+              }}
+              selectedMessageId={selectedMessageId ?? undefined}
+              error={chatError}
+              onClearError={() => setChatError(null)}
             />
           </div>
 
           {/* Sources Panel */}
           <SourcesPanel
-            sources={allSources}
+            sources={
+              selectedMessageId
+                ? messages.find((m) => m.id === selectedMessageId)?.sources ||
+                  []
+                : []
+            }
             activeSource={activeSource}
             onSourceSelect={setActiveSource}
             isOpen={sourcesPanelOpen}
@@ -403,7 +464,8 @@ export default function ChatPage() {
         onClose={() => setShowUploadModal(false)}
         onUpload={handleUpload}
         namespaces={namespaces}
-        currentNamespace={selectedNamespace}
+        currentNamespace={currentNamespace?.name}
+        uploadProgress={uploadMutation.uploadProgress}
       />
     </div>
   );

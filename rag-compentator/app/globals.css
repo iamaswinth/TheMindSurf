@@ -278,8 +278,32 @@ h6 {
   }
 }
 
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fadeInSmooth {
+  0% {
+    opacity: 0;
+    transform: translateX(10px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.animate-fadeInSmooth {
+  animation: fadeInSmooth 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .animate-fadeIn {
-  animation: neo-slide-up 0.15s ease-out;
+  animation: fadeInSmooth 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .animate-slideInUp {
@@ -292,6 +316,10 @@ h6 {
 
 .animate-pulse-slow {
   animation: neo-pulse 0.5s ease-in-out infinite;
+}
+
+.animate-loading-bar {
+  animation: loading-bar 1.5s ease-in-out infinite;
 }
 
 /* Typing Indicator - BRUTAL */
@@ -810,3 +838,21 @@ input[type="range"]::-moz-range-thumb:active {
   box-shadow: 1px 1px 0px var(--neo-black);
 }
 
+/* ============================================
+   MODAL ANIMATIONS
+   ============================================ */
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideInUp {
+  animation: slideInUp 0.3s ease-out;
+}

@@ -80,7 +80,7 @@ export default function SettingsPage() {
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-3xl mx-auto space-y-8">
             {/* API Configuration */}
-            <Card variant="white" className="p-0 overflow-hidden">
+            <Card color="white" className="p-0 overflow-hidden">
               <div className="px-6 py-4 bg-[#FF006E] border-b-4 border-black">
                 <h2 className="text-lg font-black text-white uppercase tracking-tight">
                   🔗 API CONFIGURATION
@@ -104,7 +104,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* Chat Settings */}
-            <Card variant="white" className="p-0 overflow-hidden">
+            <Card color="white" className="p-0 overflow-hidden">
               <div className="px-6 py-4 bg-[#FFFF00] border-b-4 border-black">
                 <h2 className="text-lg font-black text-black uppercase tracking-tight">
                   💬 DEFAULT CHAT SETTINGS
@@ -180,7 +180,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* Upload Settings */}
-            <Card variant="white" className="p-0 overflow-hidden">
+            <Card color="white" className="p-0 overflow-hidden">
               <div className="px-6 py-4 bg-[#CCFF00] border-b-4 border-black">
                 <h2 className="text-lg font-black text-black uppercase tracking-tight">
                   📤 DEFAULT UPLOAD SETTINGS

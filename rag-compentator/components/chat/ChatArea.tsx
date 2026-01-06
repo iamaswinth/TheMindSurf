@@ -24,29 +24,87 @@ const TypingIndicator: React.FC = () => (
   </div>
 );
 
-// Source Citation Pill - NEO-BRUTALIST
-interface SourcePillProps {
-  source: Source;
-  onClick: () => void;
-}
+// Loading Steps Indicator - NEO-BRUTALIST
+const LoadingStepsIndicator: React.FC = () => {
+  const [currentStep, setCurrentStep] = React.useState(0);
 
-const SourcePill: React.FC<SourcePillProps> = ({ source, onClick }) => (
-  <button onClick={onClick} className="source-pill">
-    <FileTextIcon size={12} />
-    <span className="font-bold">{source.document_name}</span>
-    <span className="font-bold">P.{source.page_number}</span>
-  </button>
-);
+  const steps = [
+    { icon: "🔍", text: "Initializing search...", duration: 2000 },
+    { icon: "🔎", text: "Performing hybrid search...", duration: 5000 },
+    { icon: "📊", text: "Filtering & ranking results...", duration: 2000 },
+    { icon: "🤖", text: "Generating answer with AI...", duration: 4000 },
+  ];
+
+  React.useEffect(() => {
+    let totalTime = 0;
+    const timers: NodeJS.Timeout[] = [];
+
+    steps.forEach((step, index) => {
+      totalTime += step.duration;
+      const timer = setTimeout(() => {
+        setCurrentStep(index);
+      }, totalTime - step.duration);
+      timers.push(timer);
+    });
+
+    return () => timers.forEach((timer) => clearTimeout(timer));
+  }, []);
+
+  return (
+    <div className="space-y-3 min-w-[300px]">
+      {steps.map((step, index) => (
+        <div
+          key={index}
+          className={`flex items-center gap-3 transition-all duration-300 ${
+            index <= currentStep ? "opacity-100" : "opacity-30"
+          }`}
+        >
+          <div
+            className={`w-8 h-8 border-2 border-black flex items-center justify-center text-lg transition-all duration-300 ${
+              index === currentStep
+                ? "bg-[#FFFF00] shadow-[2px_2px_0px_#000] scale-110"
+                : index < currentStep
+                ? "bg-[#00FFFF] shadow-[2px_2px_0px_#000]"
+                : "bg-white"
+            }`}
+          >
+            {index < currentStep ? "✓" : step.icon}
+          </div>
+          <div className="flex-1">
+            <p
+              className={`text-sm font-bold uppercase ${
+                index === currentStep
+                  ? "text-black"
+                  : index < currentStep
+                  ? "text-black/60"
+                  : "text-black/40"
+              }`}
+            >
+              {step.text}
+            </p>
+            {index === currentStep && (
+              <div className="mt-1 h-1 bg-black/10 relative overflow-hidden">
+                <div className="absolute inset-0 bg-[#FFFF00] border border-black animate-loading-bar" />
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 // Message Component - NEO-BRUTALIST
 interface MessageBubbleProps {
   message: Message;
-  onSourceClick?: (source: Source) => void;
+  onMessageClick?: (message: Message) => void;
+  isSelected?: boolean;
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
-  onSourceClick,
+  onMessageClick,
+  isSelected,
 }) => {
   const isUser = message.role === "user";
 
@@ -56,12 +114,15 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         <div className="flex-shrink-0 w-12 h-12 bg-[#00FFFF] border-4 border-black flex items-center justify-center shadow-[4px_4px_0px_#000]">
           <BotIcon size={20} className="text-black" />
         </div>
-        <div className="message-ai px-4 py-2">
-          <TypingIndicator />
+        <div className="message-ai px-5 py-4">
+          <LoadingStepsIndicator />
         </div>
       </div>
     );
   }
+
+  // Check if this message has sources (only AI messages can have sources)
+  const hasSources = !isUser && message.sources && message.sources.length > 0;
 
   return (
     <div
@@ -83,7 +144,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       </div>
 
       <div className={`max-w-[70%] ${isUser ? "items-end" : "items-start"}`}>
-        <div className={isUser ? "message-user" : "message-ai"}>
+        <div
+          className={`${isUser ? "message-user" : "message-ai"} ${
+            hasSources ? "cursor-pointer" : ""
+          } ${isSelected ? "ring-4 ring-[#FF006E] ring-offset-2" : ""}`}
+          onClick={() => hasSources && onMessageClick?.(message)}
+        >
           <div className="px-5 py-4">
             {message.error ? (
               <p className="text-[#FF0000] font-bold uppercase">
@@ -97,16 +163,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           </div>
         </div>
 
-        {/* Sources */}
-        {message.sources && message.sources.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {message.sources.map((source, idx) => (
-              <SourcePill
-                key={idx}
-                source={source}
-                onClick={() => onSourceClick?.(source)}
-              />
-            ))}
+        {/* Sources indicator */}
+        {hasSources && (
+          <div className="flex items-center gap-2 mt-3">
+            <span className="text-xs font-bold uppercase text-black/60">
+              📚 {message.sources!.length} source
+              {message.sources!.length > 1 ? "s" : ""}
+              {isSelected ? " (viewing)" : " - click to view"}
+            </span>
           </div>
         )}
 
@@ -228,8 +292,11 @@ interface ChatAreaProps {
   isLoading: boolean;
   settings: ChatSettings;
   onSendMessage: (message: string) => void;
-  onSourceClick: (source: Source) => void;
   onUpdateSettings: (settings: Partial<ChatSettings>) => void;
+  onMessageClick?: (message: Message) => void;
+  selectedMessageId?: string;
+  error?: string | null;
+  onClearError?: () => void;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -237,8 +304,11 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   isLoading,
   settings,
   onSendMessage,
-  onSourceClick,
   onUpdateSettings,
+  onMessageClick,
+  selectedMessageId,
+  error,
+  onClearError,
 }) => {
   const [input, setInput] = useState("");
   const [showSettings, setShowSettings] = useState(false);
@@ -286,12 +356,28 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             <MessageBubble
               key={message.id}
               message={message}
-              onSourceClick={onSourceClick}
+              onMessageClick={onMessageClick}
+              isSelected={selectedMessageId === message.id}
             />
           ))
         )}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="mx-4 mb-2 p-3 bg-[#FF006E] border-4 border-black text-white font-bold text-sm flex items-center justify-between shadow-[4px_4px_0px_#000]">
+          <span>⚠️ {error}</span>
+          {onClearError && (
+            <button
+              onClick={onClearError}
+              className="ml-2 p-1 hover:bg-black/20 rounded"
+            >
+              <XIcon size={16} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Input Area - NEO-BRUTALIST */}
       <div className="border-t-4 border-black p-4 bg-[#00FFFF]">
@@ -360,6 +446,109 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   );
 };
 
+// Source Detail Modal - NEO-BRUTALIST
+interface SourceDetailModalProps {
+  source: Source | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const SourceDetailModal: React.FC<SourceDetailModalProps> = ({
+  source,
+  isOpen,
+  onClose,
+}) => {
+  if (!isOpen || !source) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div
+        className="bg-white border-4 border-black max-w-3xl w-full max-h-[80vh] flex flex-col animate-slideInUp"
+        style={{ boxShadow: "8px 8px 0px #000000" }}
+      >
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-6 py-4 bg-[#00FFFF] border-b-4 border-black">
+          <h2 className="text-xl font-black text-black uppercase tracking-tight flex items-center gap-2">
+            <FileTextIcon size={24} />
+            SOURCE DETAILS
+          </h2>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 bg-black text-white flex items-center justify-center hover:bg-[#FF006E] transition-colors border-2 border-black"
+          >
+            <XIcon size={20} />
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="flex-1 overflow-y-auto p-6 bg-[#FFFEF0] space-y-4">
+          {/* Document Info */}
+          <div className="p-4 bg-[#FFFF00] border-4 border-black shadow-[4px_4px_0px_#000]">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-black text-black uppercase">
+                {source.document_name}
+              </h3>
+              <span className="px-3 py-1 bg-white border-2 border-black text-xs font-black">
+                SCORE: {(source.score * 100).toFixed(1)}%
+              </span>
+            </div>
+            <p className="text-sm font-bold text-black/70">
+              PAGE {source.page_number}
+            </p>
+            {source.metadata && (
+              <p className="text-xs font-bold text-black/60 mt-1">
+                Document ID: {source.document_id}
+              </p>
+            )}
+          </div>
+
+          {/* Full Content */}
+          <div className="p-4 bg-white border-4 border-black shadow-[4px_4px_0px_#000]">
+            <h4 className="text-sm font-black text-black uppercase mb-3 flex items-center gap-2">
+              <span className="inline-block w-3 h-3 bg-[#FF006E] border-2 border-black"></span>
+              FULL CONTENT
+            </h4>
+            <div className="prose prose-sm max-w-none">
+              <p className="text-sm font-semibold text-black leading-relaxed whitespace-pre-wrap">
+                {source.chunk_text}
+              </p>
+            </div>
+          </div>
+
+          {/* Metadata Section */}
+          {source.metadata && Object.keys(source.metadata).length > 0 && (
+            <div className="p-4 bg-[#CCFF00] border-4 border-black shadow-[4px_4px_0px_#000]">
+              <h4 className="text-sm font-black text-black uppercase mb-3 flex items-center gap-2">
+                <span className="inline-block w-3 h-3 bg-[#00FFFF] border-2 border-black"></span>
+                METADATA
+              </h4>
+              <div className="space-y-2">
+                {Object.entries(source.metadata).map(([key, value]) => (
+                  <div key={key} className="flex gap-2">
+                    <span className="text-xs font-black text-black/60 uppercase min-w-[100px]">
+                      {key}:
+                    </span>
+                    <span className="text-xs font-bold text-black">
+                      {String(value)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="flex justify-end gap-3 px-6 py-4 bg-white border-t-4 border-black">
+          <Button variant="secondary" onClick={onClose}>
+            CLOSE
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Sources Panel Component - NEO-BRUTALIST
 interface SourcesPanelProps {
   sources: Source[];
@@ -376,6 +565,20 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({
   isOpen,
   onToggle,
 }) => {
+  const [showModal, setShowModal] = React.useState(false);
+  const [modalSource, setModalSource] = React.useState<Source | null>(null);
+
+  const handleViewFull = (source: Source, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setModalSource(source);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setModalSource(null);
+  };
+
   if (!isOpen) {
     return (
       <button
@@ -427,16 +630,19 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({
                 }
               `}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <FileTextIcon size={16} />
-                  <span className="text-sm font-black uppercase truncate">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <FileTextIcon size={16} className="shrink-0" />
+                  <span
+                    className="text-sm font-black uppercase truncate block"
+                    title={source.document_name}
+                  >
                     {source.document_name}
                   </span>
                 </div>
                 <span
                   className={`
-                  text-xs px-2 py-1 font-black border-2 border-current
+                  text-xs px-2 py-1 font-black border-2 border-current shrink-0
                   ${
                     activeSource === source
                       ? "text-white border-white"
@@ -458,10 +664,12 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({
                 className={`text-sm font-semibold line-clamp-3 ${
                   activeSource === source ? "text-white/90" : "text-black/80"
                 }`}
+                title={source.chunk_text}
               >
                 {source.chunk_text}
               </p>
               <button
+                onClick={(e) => handleViewFull(source, e)}
                 className={`
                 mt-3 text-xs font-black uppercase flex items-center gap-1
                 ${
@@ -478,6 +686,13 @@ export const SourcesPanel: React.FC<SourcesPanelProps> = ({
           ))
         )}
       </div>
+
+      {/* Source Detail Modal */}
+      <SourceDetailModal
+        source={modalSource}
+        isOpen={showModal}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 };

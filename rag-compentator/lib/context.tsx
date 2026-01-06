@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode } from "react";
 import {
   AppState,
   AppAction,
@@ -9,7 +9,7 @@ import {
   UploadSettings,
   Message,
   Source,
-} from './types';
+} from "./types";
 
 // Default values
 const defaultChatSettings: ChatSettings = {
@@ -21,14 +21,15 @@ const defaultChatSettings: ChatSettings = {
 };
 
 const defaultUploadSettings: UploadSettings = {
-  chunkSize: 500,
-  chunkOverlap: 50,
-  extractTables: true,
+  strategy: "hi_res",
+  max_chunk_size: 1000,
+  enable_ai_enhancement: true,
+  upsert_to_pinecone: true,
 };
 
 const initialState: AppState = {
   currentNamespace: null,
-  chatMode: 'namespace',
+  chatMode: "namespace",
   selectedDocuments: [],
   namespaces: [],
   documents: [],
@@ -39,29 +40,30 @@ const initialState: AppState = {
   activeSource: null,
   chatSettings: defaultChatSettings,
   uploadSettings: defaultUploadSettings,
-  apiBaseUrl: 'http://localhost:8000/api/v1',
+  apiBaseUrl: "http://localhost:8000/api/v1",
 };
 
 // Reducer
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
-    case 'SET_NAMESPACE':
+    case "SET_NAMESPACE":
       return {
         ...state,
         currentNamespace: action.payload,
         selectedDocuments: [],
         messages: [],
       };
-    
-    case 'SET_CHAT_MODE':
+
+    case "SET_CHAT_MODE":
       return {
         ...state,
         chatMode: action.payload,
-        selectedDocuments: action.payload === 'namespace' ? [] : state.selectedDocuments,
+        selectedDocuments:
+          action.payload === "namespace" ? [] : state.selectedDocuments,
       };
-    
-    case 'SELECT_DOCUMENT':
-      if (state.chatMode === 'single') {
+
+    case "SELECT_DOCUMENT":
+      if (state.chatMode === "single") {
         return {
           ...state,
           selectedDocuments: [action.payload],
@@ -74,102 +76,104 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         selectedDocuments: [...state.selectedDocuments, action.payload],
       };
-    
-    case 'DESELECT_DOCUMENT':
+
+    case "DESELECT_DOCUMENT":
       return {
         ...state,
-        selectedDocuments: state.selectedDocuments.filter(id => id !== action.payload),
+        selectedDocuments: state.selectedDocuments.filter(
+          (id) => id !== action.payload
+        ),
       };
-    
-    case 'SET_SELECTED_DOCUMENTS':
+
+    case "SET_SELECTED_DOCUMENTS":
       return {
         ...state,
         selectedDocuments: action.payload,
       };
-    
-    case 'CLEAR_SELECTED_DOCUMENTS':
+
+    case "CLEAR_SELECTED_DOCUMENTS":
       return {
         ...state,
         selectedDocuments: [],
       };
-    
-    case 'SET_NAMESPACES':
+
+    case "SET_NAMESPACES":
       return {
         ...state,
         namespaces: action.payload,
       };
-    
-    case 'SET_DOCUMENTS':
+
+    case "SET_DOCUMENTS":
       return {
         ...state,
         documents: action.payload,
       };
-    
-    case 'ADD_MESSAGE':
+
+    case "ADD_MESSAGE":
       return {
         ...state,
         messages: [...state.messages, action.payload],
       };
-    
-    case 'UPDATE_MESSAGE':
+
+    case "UPDATE_MESSAGE":
       return {
         ...state,
-        messages: state.messages.map(msg =>
+        messages: state.messages.map((msg) =>
           msg.id === action.payload.id
             ? { ...msg, ...action.payload.updates }
             : msg
         ),
       };
-    
-    case 'CLEAR_MESSAGES':
+
+    case "CLEAR_MESSAGES":
       return {
         ...state,
         messages: [],
       };
-    
-    case 'SET_LOADING':
+
+    case "SET_LOADING":
       return {
         ...state,
         isLoading: action.payload,
       };
-    
-    case 'TOGGLE_SIDEBAR':
+
+    case "TOGGLE_SIDEBAR":
       return {
         ...state,
         isSidebarOpen: !state.isSidebarOpen,
       };
-    
-    case 'TOGGLE_SOURCES_PANEL':
+
+    case "TOGGLE_SOURCES_PANEL":
       return {
         ...state,
         isSourcesPanelOpen: !state.isSourcesPanelOpen,
       };
-    
-    case 'SET_ACTIVE_SOURCE':
+
+    case "SET_ACTIVE_SOURCE":
       return {
         ...state,
         activeSource: action.payload,
         isSourcesPanelOpen: action.payload ? true : state.isSourcesPanelOpen,
       };
-    
-    case 'UPDATE_CHAT_SETTINGS':
+
+    case "UPDATE_CHAT_SETTINGS":
       return {
         ...state,
         chatSettings: { ...state.chatSettings, ...action.payload },
       };
-    
-    case 'UPDATE_UPLOAD_SETTINGS':
+
+    case "UPDATE_UPLOAD_SETTINGS":
       return {
         ...state,
         uploadSettings: { ...state.uploadSettings, ...action.payload },
       };
-    
-    case 'SET_API_BASE_URL':
+
+    case "SET_API_BASE_URL":
       return {
         ...state,
         apiBaseUrl: action.payload,
       };
-    
+
     default:
       return state;
   }
@@ -179,7 +183,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
 interface AppContextType {
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
-  
+
   // Helper functions
   setNamespace: (namespace: string | null) => void;
   setChatMode: (mode: ChatMode) => void;
@@ -202,19 +206,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
   const setNamespace = (namespace: string | null) => {
-    dispatch({ type: 'SET_NAMESPACE', payload: namespace });
+    dispatch({ type: "SET_NAMESPACE", payload: namespace });
   };
 
   const setChatMode = (mode: ChatMode) => {
-    dispatch({ type: 'SET_CHAT_MODE', payload: mode });
+    dispatch({ type: "SET_CHAT_MODE", payload: mode });
   };
 
   const selectDocument = (documentId: string) => {
-    dispatch({ type: 'SELECT_DOCUMENT', payload: documentId });
+    dispatch({ type: "SELECT_DOCUMENT", payload: documentId });
   };
 
   const deselectDocument = (documentId: string) => {
-    dispatch({ type: 'DESELECT_DOCUMENT', payload: documentId });
+    dispatch({ type: "DESELECT_DOCUMENT", payload: documentId });
   };
 
   const toggleDocumentSelection = (documentId: string) => {
@@ -226,31 +230,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const clearDocumentSelection = () => {
-    dispatch({ type: 'CLEAR_SELECTED_DOCUMENTS' });
+    dispatch({ type: "CLEAR_SELECTED_DOCUMENTS" });
   };
 
   const addMessage = (message: Message) => {
-    dispatch({ type: 'ADD_MESSAGE', payload: message });
+    dispatch({ type: "ADD_MESSAGE", payload: message });
   };
 
   const updateMessage = (id: string, updates: Partial<Message>) => {
-    dispatch({ type: 'UPDATE_MESSAGE', payload: { id, updates } });
+    dispatch({ type: "UPDATE_MESSAGE", payload: { id, updates } });
   };
 
   const clearMessages = () => {
-    dispatch({ type: 'CLEAR_MESSAGES' });
+    dispatch({ type: "CLEAR_MESSAGES" });
   };
 
   const setActiveSource = (source: Source | null) => {
-    dispatch({ type: 'SET_ACTIVE_SOURCE', payload: source });
+    dispatch({ type: "SET_ACTIVE_SOURCE", payload: source });
   };
 
   const updateChatSettings = (settings: Partial<ChatSettings>) => {
-    dispatch({ type: 'UPDATE_CHAT_SETTINGS', payload: settings });
+    dispatch({ type: "UPDATE_CHAT_SETTINGS", payload: settings });
   };
 
   const updateUploadSettings = (settings: Partial<UploadSettings>) => {
-    dispatch({ type: 'UPDATE_UPLOAD_SETTINGS', payload: settings });
+    dispatch({ type: "UPDATE_UPLOAD_SETTINGS", payload: settings });
   };
 
   const value: AppContextType = {
@@ -277,7 +281,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 export function useApp() {
   const context = useContext(AppContext);
   if (context === undefined) {
-    throw new Error('useApp must be used within an AppProvider');
+    throw new Error("useApp must be used within an AppProvider");
   }
   return context;
 }
@@ -335,7 +339,7 @@ export function useSources() {
     activeSource: state.activeSource,
     isSourcesPanelOpen: state.isSourcesPanelOpen,
     setActiveSource,
-    toggleSourcesPanel: () => dispatch({ type: 'TOGGLE_SOURCES_PANEL' }),
+    toggleSourcesPanel: () => dispatch({ type: "TOGGLE_SOURCES_PANEL" }),
   };
 }
 

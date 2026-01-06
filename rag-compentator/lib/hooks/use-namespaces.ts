@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient, ApiError } from "../api-client";
-import { Namespace } from "../types";
+import { apiClient } from "../api-client";
+import { Namespace, CreateNamespaceRequest } from "../types";
 
 // Query Keys
 export const namespaceKeys = {
@@ -12,20 +12,15 @@ export const namespaceKeys = {
 };
 
 // ============================================
-// GET ALL NAMESPACES (from NeonDB via Next.js API)
+// GET ALL NAMESPACES
 // ============================================
 export function useNamespaces() {
   return useQuery({
     queryKey: namespaceKeys.lists(),
     queryFn: async () => {
-      // Use NeonDB API route for fast listing
-      const response = await fetch("/api/neon/namespaces");
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch namespaces from NeonDB");
-      }
-
-      return response.json() as Promise<Namespace[]>;
+      const response = await apiClient.getNamespaces();
+      // Extract namespaces array from response
+      return response.namespaces;
     },
     staleTime: 30 * 1000, // 30 seconds
   });
@@ -49,8 +44,9 @@ export function useCreateNamespace() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (name: string) => apiClient.createNamespace(name),
-    onMutate: async (name) => {
+    mutationFn: (data: CreateNamespaceRequest) =>
+      apiClient.createNamespace(data),
+    onMutate: async (data) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: namespaceKeys.lists() });
 
@@ -62,9 +58,10 @@ export function useCreateNamespace() {
       // Optimistically update
       const optimisticNamespace: Namespace = {
         id: `temp-${Date.now()}`,
-        name,
-        documentCount: 0,
-        createdAt: new Date().toISOString(),
+        name: data.name,
+        description: data.description,
+        document_count: 0,
+        created_at: new Date().toISOString(),
       };
 
       queryClient.setQueryData<Namespace[]>(namespaceKeys.lists(), (old) =>
@@ -73,7 +70,7 @@ export function useCreateNamespace() {
 
       return { previousNamespaces };
     },
-    onError: (err, name, context) => {
+    onError: (err, data, context) => {
       // Rollback on error
       if (context?.previousNamespaces) {
         queryClient.setQueryData(

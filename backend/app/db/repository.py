@@ -57,11 +57,20 @@ class DocumentRepository:
     
     @staticmethod
     async def list_namespaces() -> List[Dict[str, Any]]:
-        """List all namespaces."""
+        """List all namespaces with calculated counts."""
         query = """
-        SELECT id, name, description, document_count, total_chunks, created_at
-        FROM namespaces
-        ORDER BY created_at DESC
+        SELECT 
+            n.id, 
+            n.name, 
+            n.description, 
+            COUNT(DISTINCT dn.document_id) as document_count,
+            COALESCE(SUM(d.chunk_count), 0)::INTEGER as total_chunks,
+            n.created_at
+        FROM namespaces n
+        LEFT JOIN document_namespaces dn ON n.id = dn.namespace_id
+        LEFT JOIN documents d ON dn.document_id = d.id AND d.deleted_at IS NULL
+        GROUP BY n.id, n.name, n.description, n.created_at
+        ORDER BY n.created_at DESC
         """
         
         results = await db.execute_query(query)

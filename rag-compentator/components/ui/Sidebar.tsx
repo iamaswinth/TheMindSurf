@@ -86,7 +86,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
               <MessageSquareIcon size={20} className="text-black" />
             </div>
             <span className="text-xl font-black text-white uppercase tracking-tight">
-              RAG CHAT
+              The Mind Surf
             </span>
           </div>
         </div>
