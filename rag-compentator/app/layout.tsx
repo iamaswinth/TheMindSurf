@@ -37,6 +37,14 @@ export const metadata: Metadata = {
       "Transform how you interact with documents. Chat with PDFs, extract insights, and get AI-powered answers instantly using advanced RAG technology.",
     url: "https://the-mind-surf-69.vercel.app",
     siteName: "TheMindSurf",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "TheMindSurf - AI-Powered Document Chat & Analysis Platform",
+      },
+    ],
     locale: "en_US",
     type: "website",
   },
@@ -45,6 +53,7 @@ export const metadata: Metadata = {
     title: "TheMindSurf - AI-Powered Document Chat & Analysis Platform",
     description:
       "Transform how you interact with documents. Chat with PDFs, extract insights, and get AI-powered answers instantly using advanced RAG technology.",
+    images: ["/opengraph-image"],
   },
   metadataBase: new URL("https://the-mind-surf-69.vercel.app"),
 };
