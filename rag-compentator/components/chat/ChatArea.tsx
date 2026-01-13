@@ -5,8 +5,6 @@ import { Message, Source, ChatSettings } from "@/lib/types";
 import { Button, Switch, Slider } from "@/components/ui/Components";
 import {
   SendIcon,
-  SettingsIcon,
-  PaperclipIcon,
   BotIcon,
   UserIcon,
   ChevronDownIcon,
@@ -99,22 +97,24 @@ interface MessageBubbleProps {
   message: Message;
   onMessageClick?: (message: Message) => void;
   isSelected?: boolean;
+  onSourcesBadgeClick?: (message: Message) => void;
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({
   message,
   onMessageClick,
   isSelected,
+  onSourcesBadgeClick,
 }) => {
   const isUser = message.role === "user";
 
   if (message.isLoading) {
     return (
-      <div className="flex gap-4 animate-fadeIn">
-        <div className="flex-shrink-0 w-12 h-12 bg-[#00FFFF] border-4 border-black flex items-center justify-center shadow-[4px_4px_0px_#000]">
+      <div className="flex gap-3 md:gap-4 animate-fadeIn">
+        <div className="hidden md:flex flex-shrink-0 w-12 h-12 bg-[#00FFFF] border-4 border-black items-center justify-center shadow-[4px_4px_0px_#000]">
           <BotIcon size={20} className="text-black" />
         </div>
-        <div className="message-ai px-5 py-4">
+        <div className="message-ai px-4 md:px-5 py-3 md:py-4">
           <LoadingStepsIndicator />
         </div>
       </div>
@@ -126,13 +126,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   return (
     <div
-      className={`flex gap-4 animate-slideInUp ${
+      className={`flex gap-3 md:gap-4 animate-slideInUp ${
         isUser ? "flex-row-reverse" : ""
       }`}
     >
+      {/* Avatar - Hidden on mobile, shown on desktop */}
       <div
         className={`
-          flex-shrink-0 w-12 h-12 border-4 border-black flex items-center justify-center shadow-[4px_4px_0px_#000]
+          hidden md:flex flex-shrink-0 w-12 h-12 border-4 border-black items-center justify-center shadow-[4px_4px_0px_#000]
           ${isUser ? "bg-[#FF006E]" : "bg-[#00FFFF]"}
         `}
       >
@@ -143,14 +144,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         )}
       </div>
 
-      <div className={`max-w-[70%] ${isUser ? "items-end" : "items-start"}`}>
+      <div
+        className={`flex flex-col max-w-[95%] md:max-w-[70%] ${
+          isUser ? "items-end" : "items-start"
+        }`}
+      >
         <div
           className={`${isUser ? "message-user" : "message-ai"} ${
             hasSources ? "cursor-pointer" : ""
           } ${isSelected ? "ring-4 ring-[#FF006E] ring-offset-2" : ""}`}
           onClick={() => hasSources && onMessageClick?.(message)}
         >
-          <div className="px-5 py-4">
+          <div className="px-4 md:px-5 py-3 md:py-4">
             {message.error ? (
               <p className="text-[#FF0000] font-bold uppercase">
                 {message.error}
@@ -163,15 +168,31 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           </div>
         </div>
 
-        {/* Sources indicator */}
+        {/* Sources indicator - Desktop */}
         {hasSources && (
-          <div className="flex items-center gap-2 mt-3">
+          <div className="hidden md:flex items-center gap-2 mt-3">
             <span className="text-xs font-bold uppercase text-black/60">
               📚 {message.sources!.length} source
               {message.sources!.length > 1 ? "s" : ""}
               {isSelected ? " (viewing)" : " - click to view"}
             </span>
           </div>
+        )}
+
+        {/* Sources indicator - Mobile (tappable badge) */}
+        {hasSources && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSourcesBadgeClick?.(message);
+            }}
+            className="md:hidden flex items-center gap-2 mt-3 px-3 py-2 bg-[#00BCD4] text-white border-2 border-black shadow-[2px_2px_0px_#000] active:shadow-[1px_1px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] transition-all"
+          >
+            <span className="text-xs font-bold uppercase">
+              📎 {message.sources!.length} SOURCE
+              {message.sources!.length > 1 ? "S" : ""} - CLICK TO VIEW
+            </span>
+          </button>
         )}
 
         {/* Timestamp */}
@@ -294,6 +315,7 @@ interface ChatAreaProps {
   onSendMessage: (message: string) => void;
   onUpdateSettings: (settings: Partial<ChatSettings>) => void;
   onMessageClick?: (message: Message) => void;
+  onSourcesBadgeClick?: (message: Message) => void;
   selectedMessageId?: string;
   error?: string | null;
   onClearError?: () => void;
@@ -306,6 +328,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   onSendMessage,
   onUpdateSettings,
   onMessageClick,
+  onSourcesBadgeClick,
   selectedMessageId,
   error,
   onClearError,
@@ -335,9 +358,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-4 border-black shadow-[8px_8px_0px_#000]">
+    <div className="flex flex-col h-full max-h-full bg-white border-3 md:border-4 border-black shadow-[4px_4px_0px_#000] md:shadow-[8px_8px_0px_#000]">
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#FFFEF0]">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 space-y-3 md:space-y-6 bg-[#FFFEF0]">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="w-24 h-24 bg-[#FFFF00] border-4 border-black shadow-[6px_6px_0px_#000] flex items-center justify-center mb-6">
@@ -357,6 +380,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               key={message.id}
               message={message}
               onMessageClick={onMessageClick}
+              onSourcesBadgeClick={onSourcesBadgeClick}
               isSelected={selectedMessageId === message.id}
             />
           ))
@@ -379,69 +403,49 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
       )}
 
-      {/* Input Area - NEO-BRUTALIST */}
-      <div className="border-t-4 border-black p-4 bg-[#00FFFF]">
+      {/* Input Area - Modern Chat Style */}
+      <div className="flex-shrink-0 border-t-3 md:border-t-4 border-black p-3 md:p-4 bg-[#FFFEF0]">
         <form onSubmit={handleSubmit} className="relative">
-          <div className="flex items-end gap-3">
-            {/* Settings Button */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowSettings(!showSettings)}
-                className={`
-                  p-3 border-4 border-black transition-all duration-100
-                  ${
-                    showSettings
-                      ? "bg-[#FF006E] text-white shadow-[2px_2px_0px_#000]"
-                      : "bg-white text-black shadow-[4px_4px_0px_#000] hover:shadow-[6px_6px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px]"
-                  }
-                `}
-              >
-                <SettingsIcon size={20} />
-              </button>
-              <SettingsDropdown
-                isOpen={showSettings}
-                onClose={() => setShowSettings(false)}
-                settings={settings}
-                onUpdate={onUpdateSettings}
-              />
-            </div>
-
-            {/* Attachment Button */}
-            <button
-              type="button"
-              className="p-3 bg-white text-black border-4 border-black shadow-[4px_4px_0px_#000] hover:shadow-[6px_6px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-100"
-            >
-              <PaperclipIcon size={20} />
-            </button>
-
+          <div className="flex items-end gap-2">
             {/* Input */}
             <div className="flex-1 relative">
               <textarea
                 ref={inputRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  // Auto-resize textarea
+                  e.target.style.height = "auto";
+                  e.target.style.height =
+                    Math.min(e.target.scrollHeight, 150) + "px";
+                }}
                 onKeyDown={handleKeyDown}
-                placeholder="TYPE YOUR QUESTION..."
+                placeholder="Ask a question..."
                 rows={1}
-                className="w-full px-5 py-4 border-4 border-black bg-white text-black font-semibold placeholder:text-black/40 placeholder:font-bold placeholder:uppercase shadow-[4px_4px_0px_#000] focus:outline-none focus:shadow-[6px_6px_0px_#000] resize-none"
-                style={{ maxHeight: "150px" }}
+                className="w-full px-4 py-3 md:px-5 md:py-4 border-3 border-black bg-white text-black font-semibold placeholder:text-black/50 placeholder:font-medium rounded-2xl shadow-[3px_3px_0px_#000] focus:outline-none focus:shadow-[4px_4px_0px_#000] focus:border-[#FF006E] resize-none transition-all text-base"
+                style={{ minHeight: "48px", maxHeight: "150px" }}
               />
             </div>
 
             {/* Send Button */}
-            <Button
+            <button
               type="submit"
-              variant="primary"
               disabled={!input.trim() || isLoading}
-              className="flex-shrink-0"
+              className="flex-shrink-0 w-12 h-12 md:w-14 md:h-14 flex items-center justify-center bg-[#FF006E] text-white border-3 border-black rounded-full shadow-[3px_3px_0px_#000] hover:shadow-[4px_4px_0px_#000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:shadow-[1px_1px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] transition-all duration-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-[3px_3px_0px_#000] disabled:hover:translate-x-0 disabled:hover:translate-y-0"
             >
-              <SendIcon size={18} />
-              <span className="ml-2">SEND</span>
-            </Button>
+              <SendIcon size={20} />
+            </button>
           </div>
         </form>
       </div>
+
+      {/* Hidden Settings Dropdown - can be triggered from overflow menu */}
+      <SettingsDropdown
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        settings={settings}
+        onUpdate={onUpdateSettings}
+      />
     </div>
   );
 };

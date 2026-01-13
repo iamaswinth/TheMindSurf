@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { ModeSelector, ModeBadge } from "@/components/ui/ModeSelector";
 import { DocumentListCompact } from "@/components/ui/DocumentList";
@@ -33,14 +33,32 @@ import {
   createLoadingMessage,
 } from "@/lib/hooks/use-chat";
 
+// Mobile Components
+import {
+  MobileHeader,
+  ContextSwitcher,
+  OverflowMenu,
+  SourcesBottomSheet,
+} from "@/components/chat/mobile";
+
 export default function ChatPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+
   // UI State
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sourcesPanelOpen, setSourcesPanelOpen] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showNamespaceDropdown, setShowNamespaceDropdown] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+
+  // Mobile UI State
+  const [showContextSwitcher, setShowContextSwitcher] = useState(false);
+  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
+  const [showSourcesSheet, setShowSourcesSheet] = useState(false);
+  const [mobileSourcesMessage, setMobileSourcesMessage] =
+    useState<Message | null>(null);
+  const [showMobileSettings, setShowMobileSettings] = useState(false);
 
   // Data State
   const [selectedNamespace, setSelectedNamespace] = useState<string>("");
@@ -271,12 +289,61 @@ export default function ChatPage() {
     return undefined;
   };
 
+  // Mobile context switcher handler
+  const handleContextApply = useCallback(
+    (config: {
+      namespace: string;
+      mode: ChatMode;
+      selectedDocuments: string[];
+    }) => {
+      setSelectedNamespace(config.namespace);
+      setChatMode(config.mode);
+      setSelectedDocuments(config.selectedDocuments);
+    },
+    []
+  );
+
+  // Mobile sources badge click handler
+  const handleSourcesBadgeClick = useCallback((message: Message) => {
+    setMobileSourcesMessage(message);
+    setShowSourcesSheet(true);
+  }, []);
+
+  // Mobile view source full detail
+  const handleViewSourceFull = useCallback((source: Source) => {
+    // For now, just log - could open a full-screen viewer
+    console.log("View full source:", source);
+    // You could implement a full-screen source viewer here
+  }, []);
+
+  // Check if current message has sources (for overflow menu)
+  const currentMessageHasSources = useMemo(() => {
+    return messages.some((m) => m.sources && m.sources.length > 0);
+  }, [messages]);
+
+  // Get sources for mobile bottom sheet
+  const mobileSources = useMemo(() => {
+    if (mobileSourcesMessage?.sources) {
+      return mobileSourcesMessage.sources;
+    }
+    // Fallback to selected message sources or last AI message with sources
+    if (selectedMessageId) {
+      const msg = messages.find((m) => m.id === selectedMessageId);
+      if (msg?.sources) return msg.sources;
+    }
+    // Get last message with sources
+    const lastWithSources = [...messages]
+      .reverse()
+      .find((m) => m.sources && m.sources.length > 0);
+    return lastWithSources?.sources || [];
+  }, [mobileSourcesMessage, selectedMessageId, messages]);
+
   return (
     <div className="flex h-screen bg-[#FFFEF0]">
       {/* Main Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Chat Sidebar - NEO-BRUTALIST */}
+      {/* Chat Sidebar - NEO-BRUTALIST (Desktop Only) */}
       <div className="w-72 bg-black flex flex-col border-r-4 border-[#FF006E] mobile-hidden">
         {/* Current Namespace */}
         <div className="p-4 border-b-4 border-[#FF006E]">
@@ -363,8 +430,20 @@ export default function ChatPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Bar - NEO-BRUTALIST */}
-        <header className="h-16 bg-[#FF006E] border-b-4 border-black flex items-center px-4 gap-4">
+        {/* Mobile Header */}
+        <MobileHeader
+          onMenuOpen={() => setSidebarOpen(true)}
+          onContextOpen={() => setShowContextSwitcher(true)}
+          onOverflowOpen={() => setShowOverflowMenu(true)}
+          namespace={currentNamespace}
+          mode={chatMode}
+          documentCount={documents.length}
+          selectedDocumentName={getSelectedDocumentName()}
+          selectedCount={selectedDocuments.length}
+        />
+
+        {/* Desktop Top Bar - NEO-BRUTALIST */}
+        <header className="h-16 bg-[#FF006E] border-b-4 border-black items-center px-4 gap-4 mobile-hidden md:flex">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="lg:hidden p-3 bg-white text-black border-4 border-black shadow-[4px_4px_0px_#000] hover:shadow-[6px_6px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-100"
@@ -415,7 +494,7 @@ export default function ChatPage() {
 
         {/* Chat Area */}
         <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 p-4">
+          <div className="flex-1 p-2 md:p-4">
             <ChatArea
               messages={messages}
               isLoading={
@@ -436,25 +515,28 @@ export default function ChatPage() {
                   setActiveSource(null);
                 }
               }}
+              onSourcesBadgeClick={handleSourcesBadgeClick}
               selectedMessageId={selectedMessageId ?? undefined}
               error={chatError}
               onClearError={() => setChatError(null)}
             />
           </div>
 
-          {/* Sources Panel */}
-          <SourcesPanel
-            sources={
-              selectedMessageId
-                ? messages.find((m) => m.id === selectedMessageId)?.sources ||
-                  []
-                : []
-            }
-            activeSource={activeSource}
-            onSourceSelect={setActiveSource}
-            isOpen={sourcesPanelOpen}
-            onToggle={() => setSourcesPanelOpen(!sourcesPanelOpen)}
-          />
+          {/* Sources Panel (Desktop) */}
+          <div className="mobile-hidden">
+            <SourcesPanel
+              sources={
+                selectedMessageId
+                  ? messages.find((m) => m.id === selectedMessageId)?.sources ||
+                    []
+                  : []
+              }
+              activeSource={activeSource}
+              onSourceSelect={setActiveSource}
+              isOpen={sourcesPanelOpen}
+              onToggle={() => setSourcesPanelOpen(!sourcesPanelOpen)}
+            />
+          </div>
         </div>
       </div>
 
@@ -466,6 +548,50 @@ export default function ChatPage() {
         namespaces={namespaces}
         currentNamespace={currentNamespace?.name}
         uploadProgress={uploadMutation.uploadProgress}
+      />
+
+      {/* Mobile Context Switcher */}
+      <ContextSwitcher
+        isOpen={showContextSwitcher}
+        onClose={() => setShowContextSwitcher(false)}
+        onApply={handleContextApply}
+        namespaces={namespaces}
+        documents={documents}
+        currentNamespace={selectedNamespace}
+        currentMode={chatMode}
+        currentSelectedDocuments={selectedDocuments}
+        onUploadClick={() => {
+          setShowContextSwitcher(false);
+          setShowUploadModal(true);
+        }}
+      />
+
+      {/* Mobile Overflow Menu */}
+      <OverflowMenu
+        isOpen={showOverflowMenu}
+        onClose={() => setShowOverflowMenu(false)}
+        onViewSources={() => setShowSourcesSheet(true)}
+        onSwitchContext={() => setShowContextSwitcher(true)}
+        onUploadDocument={() => setShowUploadModal(true)}
+        onManageDocuments={() => router.push("/documents")}
+        onChatSettings={() => setShowMobileSettings(true)}
+        onClearChat={() => {
+          handleResetChat();
+          setShowOverflowMenu(false);
+        }}
+        hasMessages={messages.length > 0}
+        hasSources={currentMessageHasSources}
+      />
+
+      {/* Mobile Sources Bottom Sheet */}
+      <SourcesBottomSheet
+        isOpen={showSourcesSheet}
+        onClose={() => {
+          setShowSourcesSheet(false);
+          setMobileSourcesMessage(null);
+        }}
+        sources={mobileSources}
+        onViewFull={handleViewSourceFull}
       />
     </div>
   );
