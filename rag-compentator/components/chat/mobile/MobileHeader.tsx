@@ -62,7 +62,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 h-14 md:h-16 bg-gradient-to-r from-[#FF006E] to-[#FF1A7A] border-b-4 border-black flex items-center px-3 md:px-4 gap-2 shadow-[0_4px_0_#000] desktop-hidden">
+    <header className="sticky top-0 z-50 h-14 md:h-16 bg-gradient-to-r from-[#FF006E] to-[#FF1A7A] border-b-4 border-black flex items-center px-3 md:px-4 gap-2 shadow-[0_4px_0_#000] desktop-hidden">
       {/* Left Section - Hamburger Menu */}
       <button
         onClick={onMenuOpen}
