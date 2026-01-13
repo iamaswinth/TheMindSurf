@@ -30,6 +30,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+# Pre-download NLTK packages to a shared location to avoid race conditions
+# Download as root to /usr/local/share/nltk_data (system-wide location)
+RUN mkdir -p /usr/local/share/nltk_data && \
+    python -c "import nltk; nltk.download('punkt_tab', quiet=True, download_dir='/usr/local/share/nltk_data'); nltk.download('averaged_perceptron_tagger', quiet=True, download_dir='/usr/local/share/nltk_data')" && \
+    chmod -R 755 /usr/local/share/nltk_data
+
 # Copy application code
 COPY . .
 
@@ -39,14 +45,16 @@ RUN adduser --disabled-password --gecos '' appuser && \
 
 USER appuser
 
-# Expose port
-EXPOSE 8000
+# Expose port (DigitalOcean App Platform expects 8080)
+EXPOSE 8080
+
+# Set NLTK_DATA to use pre-downloaded packages (accessible by all users)
+ENV NLTK_DATA=/usr/local/share/nltk_data
 
 # Health check to verify the application is running
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')" || exit 1
 
 # Run application with production-ready settings
-# Using 2 workers as default - adjust based on your server resources
-# Formula: (2 x CPU cores) + 1
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# Using 1 worker initially to avoid any remaining race conditions, can increase later
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]

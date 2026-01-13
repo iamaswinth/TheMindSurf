@@ -24,7 +24,7 @@ import Link from "next/link";
 const cardColors = ["cyan", "lime", "pink", "yellow", "white"] as const;
 
 export default function NamespacesPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newNamespaceName, setNewNamespaceName] = useState("");
@@ -99,35 +99,49 @@ export default function NamespacesPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Neo-Brutalist Header */}
         <header
-          className="h-20 bg-[#CCFF00] border-b-4 border-black flex items-center justify-between px-6"
+          className="h-16 md:h-20 bg-[#CCFF00] border-b-4 border-black flex items-center justify-between px-3 md:px-6"
           style={{ boxShadow: "0 4px 0px #000000" }}
         >
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden w-12 h-12 bg-black text-white flex items-center justify-center border-4 border-black hover:bg-[#FF006E] transition-colors"
+              className="lg:hidden w-10 h-10 md:w-12 md:h-12 bg-black text-white flex items-center justify-center border-4 border-black hover:bg-[#FF006E] transition-colors shrink-0"
             >
               <MenuIcon size={20} />
             </button>
-            <h1 className="text-2xl font-black text-black uppercase tracking-tight">
+            <h1 className="text-lg md:text-2xl font-black text-black uppercase tracking-tight truncate">
               📁 NAMESPACES
             </h1>
           </div>
-          <Button
-            variant="primary"
-            leftIcon={<PlusIcon size={16} />}
-            onClick={() => setShowCreateModal(true)}
-          >
-            CREATE NAMESPACE
-          </Button>
+          <div className="shrink-0">
+            <div className="hidden sm:block">
+              <Button
+                variant="primary"
+                leftIcon={<PlusIcon size={16} />}
+                onClick={() => setShowCreateModal(true)}
+              >
+                CREATE NAMESPACE
+              </Button>
+            </div>
+            <div className="block sm:hidden">
+              <Button
+                variant="primary"
+                leftIcon={<PlusIcon size={16} />}
+                onClick={() => setShowCreateModal(true)}
+                size="sm"
+              >
+                NEW
+              </Button>
+            </div>
+          </div>
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-5xl mx-auto space-y-6">
+        <main className="flex-1 overflow-y-auto p-3 md:p-6">
+          <div className="max-w-5xl mx-auto space-y-4 md:space-y-6">
             {/* Search */}
             <div
-              className="bg-white border-4 border-black p-4"
+              className="bg-white border-4 border-black p-3 md:p-4"
               style={{ boxShadow: "6px 6px 0px #000000" }}
             >
               <Input
@@ -140,9 +154,9 @@ export default function NamespacesPage() {
 
             {/* Loading State */}
             {isLoading && (
-              <Card variant="white" className="p-8 text-center">
-                <div className="inline-block w-12 h-12 border-4 border-black border-t-[#FFFF00] rounded-full animate-spin mb-4" />
-                <p className="text-black font-bold uppercase">
+              <Card color="white" className="p-6 md:p-8 text-center">
+                <div className="inline-block w-10 h-10 md:w-12 md:h-12 border-4 border-black border-t-[#FFFF00] rounded-full animate-spin mb-3 md:mb-4" />
+                <p className="text-black font-bold uppercase text-sm md:text-base">
                   Loading namespaces...
                 </p>
               </Card>
@@ -150,12 +164,12 @@ export default function NamespacesPage() {
 
             {/* Error State */}
             {error && (
-              <Card variant="white" className="p-8">
+              <Card color="white" className="p-6 md:p-8">
                 <div className="text-center">
-                  <p className="text-[#FF006E] font-black text-lg uppercase mb-2">
+                  <p className="text-[#FF006E] font-black text-base md:text-lg uppercase mb-2">
                     ⚠️ ERROR
                   </p>
-                  <p className="text-black font-bold">
+                  <p className="text-black font-bold text-sm md:text-base">
                     {error.message || "Failed to load namespaces"}
                   </p>
                 </div>
@@ -164,7 +178,7 @@ export default function NamespacesPage() {
 
             {/* Namespaces Grid */}
             {!isLoading && !error && filteredNamespaces.length === 0 ? (
-              <Card variant="white" className="p-8">
+              <Card color="white" className="p-6 md:p-8">
                 <EmptyState
                   icon={<FolderIcon size={48} />}
                   title="NO NAMESPACES FOUND"
@@ -179,6 +193,7 @@ export default function NamespacesPage() {
                         variant="primary"
                         leftIcon={<PlusIcon size={16} />}
                         onClick={() => setShowCreateModal(true)}
+                        className="w-full sm:w-auto"
                       >
                         CREATE NAMESPACE
                       </Button>
@@ -187,45 +202,50 @@ export default function NamespacesPage() {
                 />
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {filteredNamespaces.map((ns, index) => (
                   <Card
                     key={ns.id}
-                    variant={cardColors[index % cardColors.length]}
+                    color={cardColors[index % cardColors.length]}
                     className="p-0 overflow-hidden"
                   >
-                    <div className="p-5">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
+                    <div className="p-4 md:p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
                           <div
-                            className="w-12 h-12 bg-black flex items-center justify-center border-2 border-black"
+                            className="w-10 h-10 md:w-12 md:h-12 bg-black flex items-center justify-center border-2 border-black shrink-0"
                             style={{ boxShadow: "3px 3px 0px rgba(0,0,0,0.3)" }}
                           >
-                            <FolderIcon size={24} className="text-[#FFFF00]" />
+                            <FolderIcon
+                              size={20}
+                              className="md:w-6 md:h-6 text-[#FFFF00]"
+                            />
                           </div>
-                          <div>
-                            <h3 className="font-black text-black text-lg uppercase">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-black text-black text-base md:text-lg uppercase truncate">
                               {ns.name}
                             </h3>
                             {ns.description && (
-                              <p className="text-xs font-bold text-black/60 mt-1">
+                              <p className="text-xs font-bold text-black/60 mt-1 line-clamp-2">
                                 {ns.description}
                               </p>
                             )}
-                            <p className="inline-block mt-1 px-2 py-0.5 bg-white border-2 border-black text-xs font-bold">
-                              {ns.document_count} DOCS
-                            </p>
-                            {ns.total_chunks !== undefined && (
-                              <span className="ml-2 inline-block px-2 py-0.5 bg-[#00FFFF] border-2 border-black text-xs font-bold">
-                                {ns.total_chunks} CHUNKS
-                              </span>
-                            )}
+                            <div className="flex flex-wrap gap-1.5 md:gap-2 mt-1.5">
+                              <p className="inline-block px-2 py-0.5 bg-white border-2 border-black text-xs font-bold">
+                                {ns.document_count} DOCS
+                              </p>
+                              {ns.total_chunks !== undefined && (
+                                <span className="inline-block px-2 py-0.5 bg-[#00FFFF] border-2 border-black text-xs font-bold">
+                                  {ns.total_chunks} CHUNKS
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <button
                           onClick={() => handleDeleteNamespace(ns.id, ns.name)}
                           disabled={deleteMutation.isPending}
-                          className="w-10 h-10 bg-[#FF006E] text-white flex items-center justify-center border-2 border-black hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-9 h-9 md:w-10 md:h-10 bg-[#FF006E] text-white flex items-center justify-center border-2 border-black hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                           style={{ boxShadow: "2px 2px 0px #000000" }}
                           title={
                             deletingNamespaceId === ns.id
@@ -234,14 +254,14 @@ export default function NamespacesPage() {
                           }
                         >
                           {deletingNamespaceId === ns.id ? (
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <div className="w-3 h-3 md:w-4 md:h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                           ) : (
-                            <TrashIcon size={16} />
+                            <TrashIcon size={14} className="md:w-4 md:h-4" />
                           )}
                         </button>
                       </div>
                     </div>
-                    <div className="px-5 py-4 border-t-4 border-black bg-white/50 flex items-center justify-between">
+                    <div className="px-4 md:px-5 py-3 md:py-4 border-t-4 border-black bg-white/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                       <span className="text-xs font-bold text-black/60 uppercase">
                         {formatDate(ns.created_at)}
                       </span>
@@ -249,9 +269,15 @@ export default function NamespacesPage() {
                         href={`/chat?namespace=${encodeURIComponent(
                           ns.name
                         )}&mode=namespace`}
+                        className="w-full sm:w-auto"
                       >
-                        <Button variant="secondary" size="sm">
-                          💬 CHAT →
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="w-full sm:w-auto"
+                        >
+                          <span className="hidden sm:inline">💬 CHAT →</span>
+                          <span className="sm:hidden">💬 CHAT</span>
                         </Button>
                       </Link>
                     </div>
@@ -265,28 +291,28 @@ export default function NamespacesPage() {
 
       {/* Neo-Brutalist Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 md:p-4">
           <div
-            className="bg-white border-4 border-black max-w-md w-full mx-4 animate-slideInUp"
+            className="bg-white border-4 border-black max-w-md w-full animate-slideInUp max-h-[90vh] overflow-y-auto"
             style={{ boxShadow: "8px 8px 0px #000000" }}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 bg-[#CCFF00] border-b-4 border-black">
-              <h2 className="text-xl font-black text-black uppercase tracking-tight">
-                📁 CREATE NAMESPACE
+            <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 bg-[#CCFF00] border-b-4 border-black">
+              <h2 className="text-base md:text-xl font-black text-black uppercase tracking-tight min-w-0 flex-1">
+                <span className="truncate">📁 CREATE NAMESPACE</span>
               </h2>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="w-10 h-10 bg-black text-white flex items-center justify-center hover:bg-[#FF006E] transition-colors border-2 border-black"
+                className="w-9 h-9 md:w-10 md:h-10 bg-black text-white flex items-center justify-center hover:bg-[#FF006E] transition-colors border-2 border-black shrink-0 ml-2"
               >
-                <XIcon size={20} />
+                <XIcon size={18} className="md:w-5 md:h-5" />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 bg-[#FFFEF0] space-y-4">
+            <div className="p-4 md:p-6 bg-[#FFFEF0] space-y-4">
               <div>
-                <label className="block text-sm font-black text-black uppercase tracking-wide mb-2">
+                <label className="block text-xs md:text-sm font-black text-black uppercase tracking-wide mb-2">
                   NAMESPACE NAME *
                 </label>
                 <Input
@@ -298,7 +324,7 @@ export default function NamespacesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-black text-black uppercase tracking-wide mb-2">
+                <label className="block text-xs md:text-sm font-black text-black uppercase tracking-wide mb-2">
                   DESCRIPTION (OPTIONAL)
                 </label>
                 <Input
@@ -309,7 +335,7 @@ export default function NamespacesPage() {
               </div>
 
               <p
-                className="p-3 bg-[#00FFFF] border-2 border-black text-sm font-bold text-black"
+                className="p-2.5 md:p-3 bg-[#00FFFF] border-2 border-black text-xs md:text-sm font-bold text-black"
                 style={{ boxShadow: "2px 2px 0px #000000" }}
               >
                 💡 NAMESPACES HELP YOU ORGANIZE DOCUMENTS BY PROJECT OR TOPIC.
@@ -317,7 +343,7 @@ export default function NamespacesPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-end gap-3 px-6 py-4 bg-white border-t-4 border-black">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 px-4 md:px-6 py-3 md:py-4 bg-white border-t-4 border-black">
               <Button
                 variant="ghost"
                 onClick={() => {
@@ -326,6 +352,7 @@ export default function NamespacesPage() {
                   setNewNamespaceDescription("");
                 }}
                 disabled={createMutation.isPending}
+                className="w-full sm:w-auto order-2 sm:order-1"
               >
                 CANCEL
               </Button>
@@ -333,6 +360,7 @@ export default function NamespacesPage() {
                 variant="primary"
                 onClick={handleCreateNamespace}
                 disabled={!newNamespaceName.trim() || createMutation.isPending}
+                className="w-full sm:w-auto order-1 sm:order-2"
               >
                 {createMutation.isPending ? "CREATING..." : "CREATE"}
               </Button>
@@ -343,15 +371,15 @@ export default function NamespacesPage() {
 
       {/* Delete Namespace Confirmation Modal */}
       {showDeleteModal && namespaceToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 md:p-4">
           <div
-            className="bg-white border-4 border-black max-w-md w-full mx-4 animate-slideInUp"
+            className="bg-white border-4 border-black max-w-md w-full animate-slideInUp max-h-[90vh] overflow-y-auto"
             style={{ boxShadow: "8px 8px 0px #000000" }}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 bg-[#FF006E] border-b-4 border-black">
-              <h2 className="text-xl font-black text-white uppercase tracking-tight">
-                ⚠️ DELETE NAMESPACE
+            <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 bg-[#FF006E] border-b-4 border-black">
+              <h2 className="text-base md:text-xl font-black text-white uppercase tracking-tight min-w-0 flex-1">
+                <span className="truncate">⚠️ DELETE NAMESPACE</span>
               </h2>
               <button
                 onClick={() => {
@@ -359,36 +387,36 @@ export default function NamespacesPage() {
                   setNamespaceToDelete(null);
                   setDeleteConfirmationName("");
                 }}
-                className="w-10 h-10 bg-black text-white flex items-center justify-center hover:bg-white hover:text-black transition-colors border-2 border-black"
+                className="w-9 h-9 md:w-10 md:h-10 bg-black text-white flex items-center justify-center hover:bg-white hover:text-black transition-colors border-2 border-black shrink-0 ml-2"
               >
-                <XIcon size={20} />
+                <XIcon size={18} className="md:w-5 md:h-5" />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 bg-[#FFFEF0] space-y-4">
+            <div className="p-4 md:p-6 bg-[#FFFEF0] space-y-4">
               <div
-                className="p-4 bg-[#FFFF00] border-4 border-black"
+                className="p-3 md:p-4 bg-[#FFFF00] border-4 border-black"
                 style={{ boxShadow: "4px 4px 0px #000000" }}
               >
-                <p className="text-sm font-black text-black uppercase mb-2">
+                <p className="text-xs md:text-sm font-black text-black uppercase mb-2">
                   ⚠️ WARNING: THIS ACTION CANNOT BE UNDONE
                 </p>
-                <p className="text-sm font-bold text-black">
+                <p className="text-xs md:text-sm font-bold text-black">
                   This will permanently delete all documents and vectors in this
                   namespace.
                 </p>
               </div>
 
               <div>
-                <p className="text-sm font-bold text-black mb-4">
+                <p className="text-xs md:text-sm font-bold text-black mb-3 md:mb-4">
                   To confirm deletion, please type the namespace name:
                 </p>
                 <div
-                  className="p-3 bg-[#00FFFF] border-2 border-black mb-4"
+                  className="p-2.5 md:p-3 bg-[#00FFFF] border-2 border-black mb-3 md:mb-4"
                   style={{ boxShadow: "2px 2px 0px #000000" }}
                 >
-                  <p className="text-lg font-black text-black text-center">
+                  <p className="text-base md:text-lg font-black text-black text-center break-words">
                     {namespaceToDelete.name}
                   </p>
                 </div>
@@ -402,7 +430,7 @@ export default function NamespacesPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-end gap-3 px-6 py-4 bg-white border-t-4 border-black">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 px-4 md:px-6 py-3 md:py-4 bg-white border-t-4 border-black">
               <Button
                 variant="ghost"
                 onClick={() => {
@@ -411,6 +439,7 @@ export default function NamespacesPage() {
                   setDeleteConfirmationName("");
                 }}
                 disabled={deletingNamespaceId === namespaceToDelete.id}
+                className="w-full sm:w-auto order-2 sm:order-1"
               >
                 CANCEL
               </Button>
@@ -421,7 +450,7 @@ export default function NamespacesPage() {
                   deleteConfirmationName !== namespaceToDelete.name ||
                   deletingNamespaceId === namespaceToDelete.id
                 }
-                className="bg-[#FF006E] hover:bg-black"
+                className="bg-[#FF006E] hover:bg-black w-full sm:w-auto order-1 sm:order-2"
               >
                 {deletingNamespaceId === namespaceToDelete.id
                   ? "DELETING..."

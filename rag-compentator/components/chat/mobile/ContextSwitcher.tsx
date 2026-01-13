@@ -64,11 +64,14 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
     prevIsOpen.current = isOpen;
   }, [isOpen, currentNamespace, currentMode, currentSelectedDocuments]);
 
+  // Filter documents based on selected namespace (for count)
+  const namespaceDocuments = documents.filter(
+    (doc) => doc.namespace === selectedNamespace
+  );
+
   // Filter documents based on selected namespace and search
-  const filteredDocuments = documents.filter(
-    (doc) =>
-      doc.namespace === selectedNamespace &&
-      doc.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredDocuments = namespaceDocuments.filter(
+    (doc) => doc.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Handle document selection
@@ -241,7 +244,7 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
               {[
                 {
                   id: "namespace" as ChatMode,
-                  label: `ALL DOCS (${documents.length})`,
+                  label: `ALL DOCS (${namespaceDocuments.length})`,
                   color: "#00FFFF",
                 },
                 {
@@ -300,7 +303,7 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
             </label>
 
             {/* Search Bar (show if more than 5 docs) */}
-            {documents.length > 5 && (
+            {namespaceDocuments.length > 5 && (
               <div className="relative mb-3">
                 <SearchIcon
                   size={18}

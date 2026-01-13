@@ -18,7 +18,7 @@ import {
   SearchIcon,
   XIcon,
 } from "@/components/ui/Icons";
-import { Document, Namespace, UploadSettings } from "@/lib/types";
+import { Document, UploadSettings } from "@/lib/types";
 import { formatDate } from "@/lib/api";
 import { useNamespaces } from "@/lib/hooks/use-namespaces";
 import {
@@ -29,7 +29,7 @@ import {
 import Link from "next/link";
 
 export default function DocumentsPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedNamespace, setSelectedNamespace] = useState<string>("all");
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -39,9 +39,8 @@ export default function DocumentsPage() {
   );
 
   // Use real data from React Query hooks
-  const { data: namespaces = [], isLoading: namespacesLoading } =
-    useNamespaces();
-  const { data: documents = [], isLoading: documentsLoading } = useDocuments(
+  const { data: namespaces = [] } = useNamespaces();
+  const { data: documents = [] } = useDocuments(
     selectedNamespace === "all" ? undefined : selectedNamespace
   );
   const uploadMutation = useUploadDocument();
@@ -101,35 +100,49 @@ export default function DocumentsPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Neo-Brutalist Header */}
         <header
-          className="h-20 bg-[#00FFFF] border-b-4 border-black flex items-center justify-between px-6"
+          className="h-16 md:h-20 bg-[#00FFFF] border-b-4 border-black flex items-center justify-between px-3 md:px-6"
           style={{ boxShadow: "0 4px 0px #000000" }}
         >
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden w-12 h-12 bg-black text-white flex items-center justify-center border-4 border-black hover:bg-[#FF006E] transition-colors"
+              className="lg:hidden w-10 h-10 md:w-12 md:h-12 bg-black text-white flex items-center justify-center border-4 border-black hover:bg-[#FF006E] transition-colors shrink-0"
             >
               <MenuIcon size={20} />
             </button>
-            <h1 className="text-2xl font-black text-black uppercase tracking-tight">
+            <h1 className="text-lg md:text-2xl font-black text-black uppercase tracking-tight truncate">
               📄 DOCUMENTS
             </h1>
           </div>
-          <Button
-            variant="primary"
-            leftIcon={<PlusIcon size={16} />}
-            onClick={() => setShowUploadModal(true)}
-          >
-            UPLOAD DOCUMENT
-          </Button>
+          <div className="shrink-0">
+            <div className="hidden sm:block">
+              <Button
+                variant="primary"
+                leftIcon={<PlusIcon size={16} />}
+                onClick={() => setShowUploadModal(true)}
+              >
+                UPLOAD DOCUMENT
+              </Button>
+            </div>
+            <div className="block sm:hidden">
+              <Button
+                variant="primary"
+                leftIcon={<PlusIcon size={16} />}
+                onClick={() => setShowUploadModal(true)}
+                size="sm"
+              >
+                UPLOAD
+              </Button>
+            </div>
+          </div>
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-5xl mx-auto space-y-6">
+        <main className="flex-1 overflow-y-auto p-3 md:p-6">
+          <div className="max-w-5xl mx-auto space-y-4 md:space-y-6">
             {/* Neo-Brutalist Filters */}
             <div
-              className="flex flex-col sm:flex-row gap-4 p-4 bg-white border-4 border-black"
+              className="flex flex-col sm:flex-row gap-3 md:gap-4 p-3 md:p-4 bg-white border-4 border-black"
               style={{ boxShadow: "6px 6px 0px #000000" }}
             >
               <div className="flex-1">
@@ -143,7 +156,7 @@ export default function DocumentsPage() {
               <select
                 value={selectedNamespace}
                 onChange={(e) => setSelectedNamespace(e.target.value)}
-                className="px-4 py-3 border-4 border-black bg-[#FFFF00] text-black font-bold focus:outline-none appearance-none cursor-pointer"
+                className="px-3 md:px-4 py-2.5 md:py-3 border-4 border-black bg-[#FFFF00] text-black font-bold focus:outline-none appearance-none cursor-pointer text-sm md:text-base"
                 style={{
                   boxShadow: "4px 4px 0px #000000",
                   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='black' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`,
@@ -164,7 +177,7 @@ export default function DocumentsPage() {
 
             {/* Documents Table */}
             {filteredDocuments.length === 0 ? (
-              <Card color="white" className="p-8">
+              <Card color="white" className="p-6 md:p-8">
                 <EmptyState
                   icon={<FileTextIcon size={48} />}
                   title="NO DOCUMENTS FOUND"
@@ -180,6 +193,7 @@ export default function DocumentsPage() {
                         variant="primary"
                         leftIcon={<PlusIcon size={16} />}
                         onClick={() => setShowUploadModal(true)}
+                        className="w-full sm:w-auto"
                       >
                         UPLOAD DOCUMENT
                       </Button>
@@ -188,98 +202,189 @@ export default function DocumentsPage() {
                 />
               </Card>
             ) : (
-              <div
-                className="bg-white border-4 border-black overflow-hidden"
-                style={{ boxShadow: "8px 8px 0px #000000" }}
-              >
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-[#FFFF00] border-b-4 border-black">
-                      <tr>
-                        <th className="px-6 py-4 text-left text-sm font-black text-black uppercase tracking-wider">
-                          DOCUMENT
-                        </th>
-                        <th className="px-6 py-4 text-left text-sm font-black text-black uppercase tracking-wider">
-                          NAMESPACE
-                        </th>
-                        <th className="px-6 py-4 text-left text-sm font-black text-black uppercase tracking-wider">
-                          PAGES
-                        </th>
-                        <th className="px-6 py-4 text-left text-sm font-black text-black uppercase tracking-wider">
-                          SIZE
-                        </th>
-                        <th className="px-6 py-4 text-left text-sm font-black text-black uppercase tracking-wider">
-                          UPLOADED
-                        </th>
-                        <th className="px-6 py-4 text-right text-sm font-black text-black uppercase tracking-wider">
-                          ACTIONS
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y-2 divide-black">
-                      {filteredDocuments.map((doc) => (
-                        <tr
-                          key={doc.id}
-                          className="hover:bg-[#FFFEF0] transition-colors"
-                        >
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className="w-10 h-10 bg-[#00FFFF] border-2 border-black flex items-center justify-center"
-                                style={{ boxShadow: "2px 2px 0px #000000" }}
-                              >
-                                <FileTextIcon
-                                  size={18}
-                                  className="text-black"
-                                />
-                              </div>
-                              <span className="text-sm font-bold text-black">
-                                {doc.name}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Badge variant="info">
-                              {getNamespaceName(doc.namespace).toUpperCase()}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-black">
-                            {doc.page_count}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-black">
-                            {doc.file_size}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-black/70">
-                            {formatDate(doc.uploaded_at)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Link
-                                href={`/chat?namespace=${encodeURIComponent(
-                                  doc.namespace
-                                )}&mode=single&documentId=${encodeURIComponent(
-                                  doc.id
-                                )}`}
-                              >
-                                <Button variant="secondary" size="sm">
-                                  💬 CHAT
-                                </Button>
-                              </Link>
-                              <button
-                                onClick={() => handleDeleteDocument(doc.id)}
-                                className="w-10 h-10 bg-[#FF006E] text-white flex items-center justify-center border-2 border-black hover:bg-black transition-colors"
-                                style={{ boxShadow: "2px 2px 0px #000000" }}
-                              >
-                                <TrashIcon size={16} />
-                              </button>
-                            </div>
-                          </td>
+              <>
+                {/* Desktop Table View */}
+                <div
+                  className="hidden md:block bg-white border-4 border-black overflow-hidden"
+                  style={{ boxShadow: "8px 8px 0px #000000" }}
+                >
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-[#FFFF00] border-b-4 border-black">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-sm font-black text-black uppercase tracking-wider">
+                            DOCUMENT
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-black text-black uppercase tracking-wider">
+                            NAMESPACE
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-black text-black uppercase tracking-wider">
+                            PAGES
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-black text-black uppercase tracking-wider">
+                            SIZE
+                          </th>
+                          <th className="px-6 py-4 text-left text-sm font-black text-black uppercase tracking-wider">
+                            UPLOADED
+                          </th>
+                          <th className="px-6 py-4 text-right text-sm font-black text-black uppercase tracking-wider">
+                            ACTIONS
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y-2 divide-black">
+                        {filteredDocuments.map((doc) => (
+                          <tr
+                            key={doc.id}
+                            className="hover:bg-[#FFFEF0] transition-colors"
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className="w-10 h-10 bg-[#00FFFF] border-2 border-black flex items-center justify-center"
+                                  style={{ boxShadow: "2px 2px 0px #000000" }}
+                                >
+                                  <FileTextIcon
+                                    size={18}
+                                    className="text-black"
+                                  />
+                                </div>
+                                <span className="text-sm font-bold text-black">
+                                  {doc.name}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <Badge variant="info">
+                                {getNamespaceName(doc.namespace).toUpperCase()}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-black">
+                              {doc.page_count}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-black">
+                              {doc.file_size}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-black/70">
+                              {formatDate(doc.uploaded_at)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <Link
+                                  href={`/chat?namespace=${encodeURIComponent(
+                                    doc.namespace
+                                  )}&mode=single&documentId=${encodeURIComponent(
+                                    doc.id
+                                  )}`}
+                                >
+                                  <Button variant="secondary" size="sm">
+                                    💬 CHAT
+                                  </Button>
+                                </Link>
+                                <button
+                                  onClick={() => handleDeleteDocument(doc.id)}
+                                  className="w-10 h-10 bg-[#FF006E] text-white flex items-center justify-center border-2 border-black hover:bg-black transition-colors"
+                                  style={{ boxShadow: "2px 2px 0px #000000" }}
+                                >
+                                  <TrashIcon size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4">
+                  {filteredDocuments.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="bg-white border-4 border-black shadow-[6px_6px_0px_#000000] p-4"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div
+                              className="w-10 h-10 bg-[#00FFFF] border-2 border-black flex items-center justify-center shrink-0"
+                              style={{ boxShadow: "2px 2px 0px #000000" }}
+                            >
+                              <FileTextIcon size={18} className="text-black" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-sm font-bold text-black truncate">
+                                {doc.name}
+                              </h3>
+                              <div className="mt-1 flex flex-wrap gap-2">
+                                <Badge variant="info" className="text-xs">
+                                  {getNamespaceName(
+                                    doc.namespace
+                                  ).toUpperCase()}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteDocument(doc.id)}
+                            className="w-9 h-9 bg-[#FF006E] text-white flex items-center justify-center border-2 border-black hover:bg-black transition-colors shrink-0"
+                            style={{ boxShadow: "2px 2px 0px #000000" }}
+                          >
+                            <TrashIcon size={14} />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 pt-2 border-t-2 border-black">
+                          <div>
+                            <p className="text-xs font-black text-black/60 uppercase mb-1">
+                              PAGES
+                            </p>
+                            <p className="text-sm font-bold text-black">
+                              {doc.page_count}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-black text-black/60 uppercase mb-1">
+                              SIZE
+                            </p>
+                            <p className="text-sm font-bold text-black">
+                              {doc.file_size}
+                            </p>
+                          </div>
+                          <div className="col-span-2">
+                            <p className="text-xs font-black text-black/60 uppercase mb-1">
+                              UPLOADED
+                            </p>
+                            <p className="text-sm font-bold text-black/70">
+                              {formatDate(doc.uploaded_at)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t-2 border-black">
+                          <Link
+                            href={`/chat?namespace=${encodeURIComponent(
+                              doc.namespace
+                            )}&mode=single&documentId=${encodeURIComponent(
+                              doc.id
+                            )}`}
+                            className="block w-full"
+                          >
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="w-full"
+                            >
+                              💬 CHAT
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </main>
@@ -299,53 +404,53 @@ export default function DocumentsPage() {
 
       {/* Delete Document Confirmation Modal */}
       {showDeleteModal && documentToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 md:p-4">
           <div
-            className="bg-white border-4 border-black max-w-md w-full mx-4 animate-slideInUp"
+            className="bg-white border-4 border-black max-w-md w-full animate-slideInUp max-h-[90vh] overflow-y-auto"
             style={{ boxShadow: "8px 8px 0px #000000" }}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 bg-[#FF006E] border-b-4 border-black">
-              <h2 className="text-xl font-black text-white uppercase tracking-tight">
-                ⚠️ DELETE DOCUMENT
+            <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 bg-[#FF006E] border-b-4 border-black">
+              <h2 className="text-base md:text-xl font-black text-white uppercase tracking-tight min-w-0">
+                <span className="truncate">⚠️ DELETE DOCUMENT</span>
               </h2>
               <button
                 onClick={() => {
                   setShowDeleteModal(false);
                   setDocumentToDelete(null);
                 }}
-                className="w-10 h-10 bg-black text-white flex items-center justify-center hover:bg-white hover:text-black transition-colors border-2 border-black"
+                className="w-9 h-9 md:w-10 md:h-10 bg-black text-white flex items-center justify-center hover:bg-white hover:text-black transition-colors border-2 border-black shrink-0"
               >
-                <XIcon size={20} />
+                <XIcon size={18} className="md:w-5 md:h-5" />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 bg-[#FFFEF0] space-y-4">
+            <div className="p-4 md:p-6 bg-[#FFFEF0] space-y-4">
               <div
-                className="p-4 bg-[#FFFF00] border-4 border-black"
+                className="p-3 md:p-4 bg-[#FFFF00] border-4 border-black"
                 style={{ boxShadow: "4px 4px 0px #000000" }}
               >
-                <p className="text-sm font-black text-black uppercase mb-2">
+                <p className="text-xs md:text-sm font-black text-black uppercase mb-2">
                   ⚠️ WARNING: THIS ACTION CANNOT BE UNDONE
                 </p>
-                <p className="text-sm font-bold text-black">
+                <p className="text-xs md:text-sm font-bold text-black">
                   This will permanently delete the document and all associated
                   vectors from Pinecone.
                 </p>
               </div>
 
               <div
-                className="p-4 bg-white border-2 border-black"
+                className="p-3 md:p-4 bg-white border-2 border-black"
                 style={{ boxShadow: "2px 2px 0px #000000" }}
               >
                 <p className="text-xs font-black text-black uppercase mb-1">
                   DOCUMENT:
                 </p>
-                <p className="text-lg font-black text-black">
+                <p className="text-base md:text-lg font-black text-black wrap-break-word">
                   {documentToDelete.name}
                 </p>
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <Badge variant="info">
                     {getNamespaceName(documentToDelete.namespace).toUpperCase()}
                   </Badge>
@@ -357,7 +462,7 @@ export default function DocumentsPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-end gap-3 px-6 py-4 bg-white border-t-4 border-black">
+            <div className="flex flex-col sm:flex-row justify-end gap-3 px-4 md:px-6 py-4 bg-white border-t-4 border-black">
               <Button
                 variant="ghost"
                 onClick={() => {
@@ -365,6 +470,7 @@ export default function DocumentsPage() {
                   setDocumentToDelete(null);
                 }}
                 disabled={deleteMutation.isPending}
+                className="w-full sm:w-auto order-2 sm:order-1"
               >
                 CANCEL
               </Button>
@@ -372,7 +478,7 @@ export default function DocumentsPage() {
                 variant="primary"
                 onClick={confirmDeleteDocument}
                 disabled={deleteMutation.isPending}
-                className="bg-[#FF006E] hover:bg-black"
+                className="bg-[#FF006E] hover:bg-black w-full sm:w-auto order-1 sm:order-2"
               >
                 {deleteMutation.isPending ? "DELETING..." : "DELETE DOCUMENT"}
               </Button>

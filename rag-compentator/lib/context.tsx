@@ -25,6 +25,7 @@ const defaultUploadSettings: UploadSettings = {
   max_chunk_size: 1000,
   enable_ai_enhancement: true,
   upsert_to_pinecone: true,
+  pinecone_namespace: "",
 };
 
 const initialState: AppState = {

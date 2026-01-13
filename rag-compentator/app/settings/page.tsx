@@ -12,7 +12,7 @@ import {
 import { MenuIcon, CheckIcon } from "@/components/ui/Icons";
 
 export default function SettingsPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [saved, setSaved] = useState(false);
 
   // API Settings

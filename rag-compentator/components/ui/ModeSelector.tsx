@@ -84,7 +84,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
       {modeOptions.map((option) => {
         const isSelected = mode === option.id;
         return (
@@ -92,30 +92,30 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
             key={option.id}
             onClick={() => onChange(option.id)}
             className={`
-              flex flex-col items-center gap-4 p-6 
-              border-4 border-black transition-all duration-100
+              flex flex-row sm:flex-col items-center gap-3 sm:gap-4 p-4 sm:p-6 
+              border-3 sm:border-4 border-black transition-all duration-100
               ${
                 isSelected
-                  ? "shadow-[8px_8px_0px_#000] translate-x-[-4px] translate-y-[-4px]"
-                  : "bg-white shadow-[6px_6px_0px_#000] hover:shadow-[8px_8px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px]"
+                  ? "shadow-[6px_6px_0px_#000] sm:shadow-[8px_8px_0px_#000] translate-x-[-3px] translate-y-[-3px] sm:translate-x-[-4px] sm:translate-y-[-4px]"
+                  : "bg-white shadow-[4px_4px_0px_#000] sm:shadow-[6px_6px_0px_#000] hover:shadow-[6px_6px_0px_#000] sm:hover:shadow-[8px_8px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px]"
               }
             `}
             style={{ backgroundColor: isSelected ? option.color : undefined }}
           >
             <div
               className={`
-                w-16 h-16 flex items-center justify-center 
-                border-4 border-black
+                w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center shrink-0
+                border-3 sm:border-4 border-black
                 ${isSelected ? "bg-white" : "bg-[#FFFF00]"}
               `}
             >
               {option.icon}
             </div>
-            <div className="text-center">
-              <h3 className="font-black text-base uppercase tracking-tight text-black">
+            <div className="text-left sm:text-center flex-1 sm:flex-none min-w-0">
+              <h3 className="font-black text-sm sm:text-base uppercase tracking-tight text-black truncate sm:whitespace-normal">
                 {option.label}
               </h3>
-              <p className="text-xs font-semibold text-black/70 mt-1 uppercase">
+              <p className="text-xs font-semibold text-black/70 mt-0.5 sm:mt-1 uppercase leading-tight">
                 {option.description}
               </p>
             </div>

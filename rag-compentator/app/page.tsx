@@ -15,8 +15,6 @@ import {
 } from "@/components/ui/Icons";
 import {
   ChatMode,
-  Document,
-  Namespace,
   UploadSettings,
   MultimodalProcessResponse,
 } from "@/lib/types";
@@ -25,7 +23,7 @@ import { useNamespaces, useCreateNamespace } from "@/lib/hooks/use-namespaces";
 import { useDocuments, useUploadDocument } from "@/lib/hooks/use-documents";
 
 export default function DashboardPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedNamespace, setSelectedNamespace] = useState<string>("");
   const [chatMode, setChatMode] = useState<ChatMode>("namespace");
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
@@ -126,19 +124,19 @@ export default function DashboardPage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar - NEO-BRUTALIST */}
-        <header className="h-20 bg-[#FFFF00] border-b-4 border-black flex items-center justify-between px-6">
-          <div className="flex items-center gap-4">
+        <header className="h-16 md:h-20 bg-[#FFFF00] border-b-4 border-black flex items-center justify-between px-3 md:px-6">
+          <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden p-3 text-black bg-white border-4 border-black shadow-[4px_4px_0px_#000] hover:shadow-[6px_6px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-100"
+              className="lg:hidden p-2 md:p-3 text-black bg-white border-4 border-black shadow-[4px_4px_0px_#000] hover:shadow-[6px_6px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-100 shrink-0"
             >
               <MenuIcon size={20} />
             </button>
-            <h1 className="text-2xl font-black text-black uppercase tracking-tight">
+            <h1 className="text-lg md:text-2xl font-black text-black uppercase tracking-tight truncate">
               DASHBOARD
             </h1>
-        </div>
-          <div className="flex items-center gap-4">
+          </div>
+          <div className="flex items-center gap-2 md:gap-4 shrink-0">
             <ModeBadge
               mode={chatMode}
               documentCount={documents.length}
@@ -149,19 +147,20 @@ export default function DashboardPage() {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-5xl mx-auto space-y-8">
+        <main className="flex-1 overflow-y-auto p-3 md:p-6">
+          <div className="max-w-5xl mx-auto space-y-4 md:space-y-8">
             {/* Namespace Selector */}
-            <Card className="p-6" color="white">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-black text-black uppercase tracking-tight flex items-center gap-2">
-                  <span className="inline-block w-4 h-4 bg-[#00FFFF] border-2 border-black"></span>
-                  SELECT NAMESPACE
+            <Card className="p-4 md:p-6" color="white">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <h2 className="text-base md:text-xl font-black text-black uppercase tracking-tight flex items-center gap-2">
+                  <span className="inline-block w-3 h-3 md:w-4 md:h-4 bg-[#00FFFF] border-2 border-black shrink-0"></span>
+                  <span className="truncate">SELECT NAMESPACE</span>
                 </h2>
                 <Button
                   variant="primary"
                   leftIcon={<PlusIcon size={16} />}
                   onClick={() => setShowCreateNamespaceModal(true)}
+                  className="w-full sm:w-auto"
                 >
                   NEW
                 </Button>
@@ -178,26 +177,29 @@ export default function DashboardPage() {
             </Card>
 
             {/* Mode Selector */}
-            <Card className="p-6" color="cyan">
-              <h2 className="text-xl font-black text-black mb-6 uppercase tracking-tight flex items-center gap-2">
-                <span className="inline-block w-4 h-4 bg-[#FF006E] border-2 border-black"></span>
-                CHAT MODE SELECTION
+            <Card className="p-4 md:p-6" color="cyan">
+              <h2 className="text-base md:text-xl font-black text-black mb-4 md:mb-6 uppercase tracking-tight flex items-center gap-2">
+                <span className="inline-block w-3 h-3 md:w-4 md:h-4 bg-[#FF006E] border-2 border-black shrink-0"></span>
+                <span className="truncate">CHAT MODE SELECTION</span>
               </h2>
               <ModeSelector mode={chatMode} onChange={handleModeChange} />
             </Card>
 
             {/* Documents List */}
-            <Card className="p-6" color="lime">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-black text-black uppercase tracking-tight flex items-center gap-2">
-                  <span className="inline-block w-4 h-4 bg-[#FFFF00] border-2 border-black"></span>
-                  DOCUMENTS ({documents.length})
+            <Card className="p-4 md:p-6" color="lime">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 md:mb-6">
+                <h2 className="text-base md:text-xl font-black text-black uppercase tracking-tight flex items-center gap-2">
+                  <span className="inline-block w-3 h-3 md:w-4 md:h-4 bg-[#FFFF00] border-2 border-black shrink-0"></span>
+                  <span className="truncate">
+                    DOCUMENTS ({documents.length})
+                  </span>
                 </h2>
                 <Button
                   variant="secondary"
                   size="sm"
                   leftIcon={<PlusIcon size={16} />}
                   onClick={() => setShowUploadModal(true)}
+                  className="w-full sm:w-auto"
                 >
                   Upload New
                 </Button>
@@ -228,14 +230,17 @@ export default function DashboardPage() {
                       )}`
                     : ""
                 }`}
+                className="w-full sm:w-auto"
               >
                 <Button
                   variant="primary"
                   size="lg"
                   disabled={!canStartChat()}
                   rightIcon={<ChevronRightIcon size={20} />}
+                  className="w-full sm:w-auto"
                 >
-                  START CHAT →
+                  <span className="hidden sm:inline">START CHAT →</span>
+                  <span className="sm:hidden">START CHAT</span>
                 </Button>
               </Link>
             </div>
@@ -255,16 +260,16 @@ export default function DashboardPage() {
 
       {/* Create Namespace Modal */}
       {showCreateNamespaceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 md:p-4">
           <div
-            className="bg-white border-4 border-black max-w-md w-full animate-slideInUp"
+            className="bg-white border-4 border-black max-w-md w-full animate-slideInUp max-h-[90vh] overflow-y-auto"
             style={{ boxShadow: "8px 8px 0px #000000" }}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 bg-[#00FFFF] border-b-4 border-black">
-              <h2 className="text-xl font-black text-black uppercase tracking-tight flex items-center gap-2">
-                <FolderIcon size={24} />
-                CREATE NAMESPACE
+            <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 bg-[#00FFFF] border-b-4 border-black">
+              <h2 className="text-base md:text-xl font-black text-black uppercase tracking-tight flex items-center gap-2 min-w-0">
+                <FolderIcon size={20} className="md:w-6 md:h-6 shrink-0" />
+                <span className="truncate">CREATE NAMESPACE</span>
               </h2>
               <button
                 onClick={() => {
@@ -272,14 +277,14 @@ export default function DashboardPage() {
                   setNewNamespaceName("");
                   setNewNamespaceDescription("");
                 }}
-                className="w-10 h-10 bg-black text-white flex items-center justify-center hover:bg-[#FF006E] transition-colors border-2 border-black"
+                className="w-9 h-9 md:w-10 md:h-10 bg-black text-white flex items-center justify-center hover:bg-[#FF006E] transition-colors border-2 border-black shrink-0"
               >
-                <XIcon size={20} />
+                <XIcon size={18} className="md:w-5 md:h-5" />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 bg-[#FFFEF0] space-y-4">
+            <div className="p-4 md:p-6 bg-[#FFFEF0] space-y-4">
               <Input
                 label="Namespace Name"
                 placeholder="e.g., medical-docs, research-papers"
@@ -299,7 +304,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-end gap-3 px-6 py-4 bg-white border-t-4 border-black">
+            <div className="flex flex-col sm:flex-row justify-end gap-3 px-4 md:px-6 py-4 bg-white border-t-4 border-black">
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -307,6 +312,7 @@ export default function DashboardPage() {
                   setNewNamespaceName("");
                   setNewNamespaceDescription("");
                 }}
+                className="w-full sm:w-auto order-2 sm:order-1"
               >
                 CANCEL
               </Button>
@@ -317,6 +323,7 @@ export default function DashboardPage() {
                   !newNamespaceName.trim() || createNamespaceMutation.isPending
                 }
                 leftIcon={<PlusIcon size={16} />}
+                className="w-full sm:w-auto order-1 sm:order-2"
               >
                 {createNamespaceMutation.isPending ? "CREATING..." : "CREATE"}
               </Button>

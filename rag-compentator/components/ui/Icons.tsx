@@ -549,3 +549,65 @@ export const ClipboardIcon: React.FC<IconProps> = ({
     <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
   </svg>
 );
+
+export const MoreVerticalIcon: React.FC<IconProps> = ({
+  className = "",
+  size = 20,
+}) => (
+  <svg
+    className={className}
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="1" />
+    <circle cx="12" cy="5" r="1" />
+    <circle cx="12" cy="19" r="1" />
+  </svg>
+);
+
+export const TargetIcon: React.FC<IconProps> = ({
+  className = "",
+  size = 20,
+}) => (
+  <svg
+    className={className}
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="6" />
+    <circle cx="12" cy="12" r="2" />
+  </svg>
+);
+
+export const ArrowUpDownIcon: React.FC<IconProps> = ({
+  className = "",
+  size = 20,
+}) => (
+  <svg
+    className={className}
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M11 17l-4 4m0 0l-4-4m4 4V3" />
+    <path d="M21 7l-4-4m0 0l-4 4m4-4v18" />
+  </svg>
+);

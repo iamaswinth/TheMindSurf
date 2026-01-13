@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  Suspense,
+} from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { ModeSelector, ModeBadge } from "@/components/ui/ModeSelector";
@@ -39,14 +45,15 @@ import {
   ContextSwitcher,
   OverflowMenu,
   SourcesBottomSheet,
+  SettingsBottomSheet,
 } from "@/components/chat/mobile";
 
-export default function ChatPage() {
+function ChatPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   // UI State
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sourcesPanelOpen, setSourcesPanelOpen] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showNamespaceDropdown, setShowNamespaceDropdown] = useState(false);
@@ -593,6 +600,33 @@ export default function ChatPage() {
         sources={mobileSources}
         onViewFull={handleViewSourceFull}
       />
+
+      {/* Mobile Settings Bottom Sheet */}
+      <SettingsBottomSheet
+        isOpen={showMobileSettings}
+        onClose={() => setShowMobileSettings(false)}
+        settings={chatSettings}
+        onUpdate={(updates) =>
+          setChatSettings((prev) => ({ ...prev, ...updates }))
+        }
+      />
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-[#FFFEF0]">
+          <div className="text-center">
+            <div className="inline-block w-12 h-12 border-4 border-black border-t-[#FFFF00] rounded-full animate-spin mb-4" />
+            <p className="text-black font-bold uppercase">Loading Chat...</p>
+          </div>
+        </div>
+      }
+    >
+      <ChatPageContent />
+    </Suspense>
   );
 }

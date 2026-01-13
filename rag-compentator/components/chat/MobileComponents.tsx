@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Message, Source, ChatSettings, Namespace, Document, ChatMode } from "@/lib/types";
+import {
+  Message,
+  Source,
+  ChatSettings,
+  Namespace,
+  Document,
+  ChatMode,
+} from "@/lib/types";
 import {
   MenuIcon,
   XIcon,
@@ -56,7 +63,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
   };
 
   return (
-    <header className="flex items-center justify-between h-14 md:h-16 px-3 bg-gradient-to-r from-[#FF006E] to-[#FF4D94] border-b-4 border-black sticky top-0 z-40">
+    <header className="flex items-center justify-between h-14 md:h-16 px-3 bg-gradient-to-r from-[#FF006E] to-[#FF4D94] border-b-4 border-black sticky top-0 z-30">
       {/* Left - Menu Button */}
       <button
         onClick={onMenuOpen}
@@ -81,7 +88,9 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               <ChevronRightIcon size={10} />
               {getModeLabel()}
               {currentMode === "single" && currentDocument && (
-                <span className="truncate max-w-[80px]">: {currentDocument.name}</span>
+                <span className="truncate max-w-[80px]">
+                  : {currentDocument.name}
+                </span>
               )}
             </span>
           </>
@@ -133,7 +142,12 @@ interface ContextSwitcherModalProps {
   currentMode: ChatMode;
   currentDocumentId?: string;
   selectedDocumentIds?: string[];
-  onApply: (namespaceId: string, mode: ChatMode, documentId?: string, documentIds?: string[]) => void;
+  onApply: (
+    namespaceId: string,
+    mode: ChatMode,
+    documentId?: string,
+    documentIds?: string[]
+  ) => void;
   isLoadingNamespaces?: boolean;
   isLoadingDocuments?: boolean;
 }
@@ -151,10 +165,13 @@ export const ContextSwitcherModal: React.FC<ContextSwitcherModalProps> = ({
   isLoadingNamespaces,
   isLoadingDocuments,
 }) => {
-  const [selectedNamespaceId, setSelectedNamespaceId] = useState(currentNamespace?.id || "");
+  const [selectedNamespaceId, setSelectedNamespaceId] = useState(
+    currentNamespace?.id || ""
+  );
   const [selectedMode, setSelectedMode] = useState<ChatMode>(currentMode);
   const [selectedDocId, setSelectedDocId] = useState(currentDocumentId || "");
-  const [selectedDocIds, setSelectedDocIds] = useState<string[]>(selectedDocumentIds);
+  const [selectedDocIds, setSelectedDocIds] =
+    useState<string[]>(selectedDocumentIds);
   const [searchQuery, setSearchQuery] = useState("");
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -167,7 +184,13 @@ export const ContextSwitcherModal: React.FC<ContextSwitcherModalProps> = ({
       setSelectedDocIds(selectedDocumentIds);
       setSearchQuery("");
     }
-  }, [isOpen, currentNamespace, currentMode, currentDocumentId, selectedDocumentIds]);
+  }, [
+    isOpen,
+    currentNamespace,
+    currentMode,
+    currentDocumentId,
+    selectedDocumentIds,
+  ]);
 
   const handleApply = () => {
     onApply(
@@ -263,9 +286,21 @@ export const ContextSwitcherModal: React.FC<ContextSwitcherModalProps> = ({
             </label>
             <div className="space-y-2">
               {[
-                { value: "namespace", label: "ALL DOCS", desc: "Search all documents" },
-                { value: "single", label: "SINGLE DOC", desc: "Focus on one document" },
-                { value: "multi", label: "MULTI-DOC", desc: "Select multiple documents" },
+                {
+                  value: "namespace",
+                  label: "ALL DOCS",
+                  desc: "Search all documents",
+                },
+                {
+                  value: "single",
+                  label: "SINGLE DOC",
+                  desc: "Focus on one document",
+                },
+                {
+                  value: "multi",
+                  label: "MULTI-DOC",
+                  desc: "Select multiple documents",
+                },
               ].map((option) => (
                 <label
                   key={option.value}
@@ -285,7 +320,9 @@ export const ContextSwitcherModal: React.FC<ContextSwitcherModalProps> = ({
                   />
                   <div>
                     <span className="font-black text-sm">{option.label}</span>
-                    <p className="text-xs font-semibold text-black/60">{option.desc}</p>
+                    <p className="text-xs font-semibold text-black/60">
+                      {option.desc}
+                    </p>
                   </div>
                 </label>
               ))}
@@ -293,87 +330,98 @@ export const ContextSwitcherModal: React.FC<ContextSwitcherModalProps> = ({
           </div>
 
           {/* Document Selection (for single/multi mode) */}
-          {(selectedMode === "single" || selectedMode === "multi") && selectedNamespaceId && (
-            <div>
-              <label className="flex items-center justify-between text-sm font-black uppercase mb-2">
-                <span className="flex items-center gap-2">
-                  <FileTextIcon size={16} />
-                  Select Doc{selectedMode === "multi" ? "s" : ""}
-                </span>
-                <span className="text-xs font-bold text-black/60">
-                  ({filteredDocuments.length} documents)
-                </span>
-              </label>
+          {(selectedMode === "single" || selectedMode === "multi") &&
+            selectedNamespaceId && (
+              <div>
+                <label className="flex items-center justify-between text-sm font-black uppercase mb-2">
+                  <span className="flex items-center gap-2">
+                    <FileTextIcon size={16} />
+                    Select Doc{selectedMode === "multi" ? "s" : ""}
+                  </span>
+                  <span className="text-xs font-bold text-black/60">
+                    ({filteredDocuments.length} documents)
+                  </span>
+                </label>
 
-              {/* Search */}
-              {documents.length > 5 && (
-                <div className="relative mb-2">
-                  <SearchIcon
-                    size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Search documents..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border-3 border-black font-semibold text-sm placeholder:text-black/40"
-                  />
-                </div>
-              )}
-
-              {/* Document List */}
-              <div className="max-h-48 overflow-y-auto space-y-2 border-4 border-black p-2 bg-[#FFFEF0]">
-                {isLoadingDocuments ? (
-                  <div className="p-4 text-center">
-                    <div className="animate-pulse font-bold text-sm">Loading documents...</div>
+                {/* Search */}
+                {documents.length > 5 && (
+                  <div className="relative mb-2">
+                    <SearchIcon
+                      size={16}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-black/40"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Search documents..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border-3 border-black font-semibold text-sm placeholder:text-black/40"
+                    />
                   </div>
-                ) : filteredDocuments.length === 0 ? (
-                  <div className="p-4 text-center text-sm font-bold text-black/60">
-                    No documents found
-                  </div>
-                ) : (
-                  filteredDocuments.map((doc) => {
-                    const isSelected =
-                      selectedMode === "single"
-                        ? selectedDocId === doc.id
-                        : selectedDocIds.includes(doc.id);
-                    return (
-                      <label
-                        key={doc.id}
-                        className={`flex items-center gap-3 p-3 border-3 border-black cursor-pointer transition-all ${
-                          isSelected
-                            ? "bg-[#00FFFF] shadow-[2px_2px_0px_#000]"
-                            : "bg-white hover:bg-[#FFFEF0]"
-                        }`}
-                      >
-                        <input
-                          type={selectedMode === "single" ? "radio" : "checkbox"}
-                          name="document"
-                          checked={isSelected}
-                          onChange={() => handleDocumentToggle(doc.id)}
-                          className="w-5 h-5 accent-[#FF006E]"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <span className="font-bold text-sm truncate block">{doc.name}</span>
-                          <span className="text-xs font-semibold text-black/60">
-                            {doc.page_count} pages
-                          </span>
-                        </div>
-                      </label>
-                    );
-                  })
                 )}
+
+                {/* Document List */}
+                <div className="max-h-48 overflow-y-auto space-y-2 border-4 border-black p-2 bg-[#FFFEF0]">
+                  {isLoadingDocuments ? (
+                    <div className="p-4 text-center">
+                      <div className="animate-pulse font-bold text-sm">
+                        Loading documents...
+                      </div>
+                    </div>
+                  ) : filteredDocuments.length === 0 ? (
+                    <div className="p-4 text-center text-sm font-bold text-black/60">
+                      No documents found
+                    </div>
+                  ) : (
+                    filteredDocuments.map((doc) => {
+                      const isSelected =
+                        selectedMode === "single"
+                          ? selectedDocId === doc.id
+                          : selectedDocIds.includes(doc.id);
+                      return (
+                        <label
+                          key={doc.id}
+                          className={`flex items-center gap-3 p-3 border-3 border-black cursor-pointer transition-all ${
+                            isSelected
+                              ? "bg-[#00FFFF] shadow-[2px_2px_0px_#000]"
+                              : "bg-white hover:bg-[#FFFEF0]"
+                          }`}
+                        >
+                          <input
+                            type={
+                              selectedMode === "single" ? "radio" : "checkbox"
+                            }
+                            name="document"
+                            checked={isSelected}
+                            onChange={() => handleDocumentToggle(doc.id)}
+                            className="w-5 h-5 accent-[#FF006E]"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="font-bold text-sm truncate block">
+                              {doc.name}
+                            </span>
+                            <span className="text-xs font-semibold text-black/60">
+                              {doc.page_count} pages
+                            </span>
+                          </div>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
 
         {/* Footer */}
         <div className="p-4 border-t-4 border-black bg-[#FFFEF0]">
           <button
             onClick={handleApply}
-            disabled={!selectedNamespaceId || (selectedMode === "single" && !selectedDocId) || (selectedMode === "multi" && selectedDocIds.length === 0)}
+            disabled={
+              !selectedNamespaceId ||
+              (selectedMode === "single" && !selectedDocId) ||
+              (selectedMode === "multi" && selectedDocIds.length === 0)
+            }
             className="w-full py-3 bg-[#FF006E] text-white font-black uppercase border-4 border-black shadow-[4px_4px_0px_#000] disabled:opacity-50 disabled:cursor-not-allowed active:shadow-[2px_2px_0px_#000] active:translate-x-[2px] active:translate-y-[2px] transition-all"
           >
             Apply Changes
@@ -405,11 +453,14 @@ export const SourcesBottomSheet: React.FC<SourcesBottomSheetProps> = ({
   const dragStartY = useRef<number>(0);
   const currentTranslateY = useRef<number>(0);
 
-  const handleDragStart = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    dragStartY.current = clientY;
-    currentTranslateY.current = 0;
-  }, []);
+  const handleDragStart = useCallback(
+    (e: React.TouchEvent | React.MouseEvent) => {
+      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+      dragStartY.current = clientY;
+      currentTranslateY.current = 0;
+    },
+    []
+  );
 
   const handleDrag = useCallback((e: React.TouchEvent | React.MouseEvent) => {
     if (dragStartY.current === 0) return;
@@ -528,7 +579,10 @@ export const SourcesBottomSheet: React.FC<SourcesBottomSheetProps> = ({
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-black text-sm uppercase truncate" title={source.document_name}>
+                    <h3
+                      className="font-black text-sm uppercase truncate"
+                      title={source.document_name}
+                    >
                       {source.document_name}
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
@@ -591,8 +645,17 @@ export const OverflowMenu: React.FC<OverflowMenuProps> = ({
   if (!isOpen) return null;
 
   const menuItems = [
-    { icon: TrashIcon, label: "Clear Chat", onClick: onClearChat, destructive: true },
-    { icon: ArrowUpDownIcon, label: "Switch Context", onClick: onSwitchContext },
+    {
+      icon: TrashIcon,
+      label: "Clear Chat",
+      onClick: onClearChat,
+      destructive: true,
+    },
+    {
+      icon: ArrowUpDownIcon,
+      label: "Switch Context",
+      onClick: onSwitchContext,
+    },
     { icon: UploadIcon, label: "Upload Document", onClick: onUploadDocument },
     { icon: FolderIcon, label: "Manage Documents", onClick: onManageDocuments },
     { icon: FileTextIcon, label: "View Sources", onClick: onViewSources },
@@ -733,11 +796,9 @@ interface MobileSourceDetailModalProps {
   onClose: () => void;
 }
 
-export const MobileSourceDetailModal: React.FC<MobileSourceDetailModalProps> = ({
-  source,
-  isOpen,
-  onClose,
-}) => {
+export const MobileSourceDetailModal: React.FC<
+  MobileSourceDetailModalProps
+> = ({ source, isOpen, onClose }) => {
   if (!isOpen || !source) return null;
 
   return (
@@ -768,8 +829,12 @@ export const MobileSourceDetailModal: React.FC<MobileSourceDetailModalProps> = (
               {(source.score * 100).toFixed(1)}%
             </span>
           </div>
-          <p className="text-sm font-bold text-black/70">PAGE {source.page_number}</p>
-          <p className="text-xs font-bold text-black/50 mt-1">ID: {source.document_id}</p>
+          <p className="text-sm font-bold text-black/70">
+            PAGE {source.page_number}
+          </p>
+          <p className="text-xs font-bold text-black/50 mt-1">
+            ID: {source.document_id}
+          </p>
         </div>
 
         {/* Full Content */}
@@ -840,7 +905,10 @@ export const MobileChatSettings: React.FC<MobileChatSettingsProps> = ({
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 animate-fadeIn" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/50 animate-fadeIn"
+        onClick={onClose}
+      />
 
       {/* Bottom Sheet */}
       <div className="absolute bottom-0 left-0 right-0 bg-white border-t-4 border-black rounded-t-2xl max-h-[80vh] flex flex-col animate-slideUp">
@@ -868,7 +936,9 @@ export const MobileChatSettings: React.FC<MobileChatSettingsProps> = ({
               max={1}
               step={0.1}
               value={settings.temperature}
-              onChange={(e) => onUpdate({ temperature: parseFloat(e.target.value) })}
+              onChange={(e) =>
+                onUpdate({ temperature: parseFloat(e.target.value) })
+              }
               className="w-full h-3 bg-black/10 appearance-none cursor-pointer accent-[#FF006E]"
             />
             <div className="flex justify-between text-xs font-bold text-black/50 mt-1">
@@ -879,11 +949,15 @@ export const MobileChatSettings: React.FC<MobileChatSettingsProps> = ({
 
           {/* Max Tokens */}
           <div>
-            <label className="block text-sm font-black uppercase mb-2">Max Tokens</label>
+            <label className="block text-sm font-black uppercase mb-2">
+              Max Tokens
+            </label>
             <input
               type="number"
               value={settings.maxTokens}
-              onChange={(e) => onUpdate({ maxTokens: parseInt(e.target.value) })}
+              onChange={(e) =>
+                onUpdate({ maxTokens: parseInt(e.target.value) })
+              }
               className="w-full px-4 py-3 border-4 border-black font-bold shadow-[3px_3px_0px_#000]"
             />
           </div>
@@ -911,7 +985,9 @@ export const MobileChatSettings: React.FC<MobileChatSettingsProps> = ({
               className={`w-14 h-8 rounded-none border-3 border-black relative cursor-pointer transition-colors ${
                 settings.useHybridSearch ? "bg-[#00FFFF]" : "bg-white"
               }`}
-              onClick={() => onUpdate({ useHybridSearch: !settings.useHybridSearch })}
+              onClick={() =>
+                onUpdate({ useHybridSearch: !settings.useHybridSearch })
+              }
             >
               <div
                 className={`absolute top-0.5 w-6 h-6 bg-black transition-transform ${
@@ -923,12 +999,16 @@ export const MobileChatSettings: React.FC<MobileChatSettingsProps> = ({
 
           {/* Stream Responses Toggle */}
           <label className="flex items-center justify-between p-4 border-4 border-black bg-white cursor-pointer">
-            <span className="font-black uppercase text-sm">Stream Responses</span>
+            <span className="font-black uppercase text-sm">
+              Stream Responses
+            </span>
             <div
               className={`w-14 h-8 rounded-none border-3 border-black relative cursor-pointer transition-colors ${
                 settings.streamResponses ? "bg-[#00FFFF]" : "bg-white"
               }`}
-              onClick={() => onUpdate({ streamResponses: !settings.streamResponses })}
+              onClick={() =>
+                onUpdate({ streamResponses: !settings.streamResponses })
+              }
             >
               <div
                 className={`absolute top-0.5 w-6 h-6 bg-black transition-transform ${
@@ -988,5 +1068,10 @@ export const useResponsive = () => {
     return () => window.removeEventListener("resize", checkBreakpoint);
   }, []);
 
-  return { isMobile, isTablet, isDesktop, isMobileOrTablet: isMobile || isTablet };
+  return {
+    isMobile,
+    isTablet,
+    isDesktop,
+    isMobileOrTablet: isMobile || isTablet,
+  };
 };

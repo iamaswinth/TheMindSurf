@@ -223,12 +223,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     // Get the namespace that was used for upload
     const targetNamespace = isCreatingNamespace ? newNamespace : namespace;
 
-    // Navigate to chat with the uploaded document
+    // Navigate to chat with the namespace (document will be available in the namespace)
     const chatUrl = `/chat?namespace=${encodeURIComponent(
       targetNamespace
-    )}&mode=single&documentId=${encodeURIComponent(
-      processResponse.document_id
-    )}`;
+    )}&mode=namespace`;
 
     router.push(chatUrl);
     handleClose();
@@ -237,10 +235,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 md:p-4">
       {/* Neo-Brutalist Modal */}
       <div
-        className={`bg-white border-4 border-black w-full mx-4 ${
+        className={`bg-white border-4 border-black w-full mx-2 sm:mx-4 max-h-[90vh] overflow-y-auto ${
           step === "upload"
             ? showAdvanced
               ? "max-w-4xl"
@@ -253,33 +251,39 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         }}
       >
         {/* Header - Yellow Banner */}
-        <div className="flex items-center justify-between px-6 py-4 bg-[#FFFF00] border-b-4 border-black">
-          <h2 className="text-xl font-black text-black uppercase tracking-tight">
+        <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 bg-[#FFFF00] border-b-4 border-black">
+          <h2 className="text-base md:text-xl font-black text-black uppercase tracking-tight truncate min-w-0 flex-1">
             {step === "success" ? "✓ UPLOAD SUCCESS" : "📄 UPLOAD DOCUMENT"}
           </h2>
           <button
             onClick={handleClose}
-            className="w-10 h-10 bg-black text-white flex items-center justify-center hover:bg-[#FF006E] transition-colors border-2 border-black"
+            className="w-9 h-9 md:w-10 md:h-10 bg-black text-white flex items-center justify-center hover:bg-[#FF006E] transition-colors border-2 border-black shrink-0 ml-2"
           >
-            <XIcon size={20} />
+            <XIcon size={18} className="md:w-5 md:h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 bg-[#FFFEF0]">
+        <div className="p-4 md:p-6 bg-[#FFFEF0]">
           {step === "upload" && (
-            <div className={showAdvanced ? "grid grid-cols-2 gap-6" : ""}>
+            <div
+              className={
+                showAdvanced
+                  ? "grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6"
+                  : ""
+              }
+            >
               {/* Left Column or Full Width */}
-              <div className={showAdvanced ? "" : ""}>
+              <div className={showAdvanced ? "space-y-4 md:space-y-6" : ""}>
                 {/* Namespace Selection */}
-                <div className="mb-6">
-                  <label className="block text-sm font-black text-black uppercase tracking-wide mb-2">
+                <div className="mb-4 md:mb-6">
+                  <label className="block text-xs md:text-sm font-black text-black uppercase tracking-wide mb-2">
                     📁 NAMESPACE
                   </label>
                   <p className="text-xs font-bold text-black/60 mb-3 uppercase">
                     Organize documents by project, topic, or category
                   </p>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center">
                     {!isCreatingNamespace ? (
                       <>
                         <select
@@ -289,7 +293,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                             setNamespace(newNamespace);
                             console.log("✅ Namespace selected:", newNamespace);
                           }}
-                          className="flex-1 px-4 py-3 border-4 border-black bg-white text-black font-bold focus:outline-none focus:ring-0 focus:border-[#FF006E] appearance-none cursor-pointer"
+                          className="flex-1 px-3 md:px-4 py-2.5 md:py-3 border-4 border-black bg-white text-black font-bold focus:outline-none focus:ring-0 focus:border-[#FF006E] appearance-none cursor-pointer text-sm md:text-base"
                           style={{
                             boxShadow: "4px 4px 0px #000000",
                             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='black' stroke-width='3'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`,
@@ -310,6 +314,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                           variant="secondary"
                           size="md"
                           onClick={() => setIsCreatingNamespace(true)}
+                          className="w-full sm:w-auto whitespace-nowrap"
                         >
                           + NEW
                         </Button>
@@ -329,6 +334,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                             setIsCreatingNamespace(false);
                             setNewNamespace("");
                           }}
+                          className="w-full sm:w-auto whitespace-nowrap"
                         >
                           CANCEL
                         </Button>
@@ -343,7 +349,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`border-4 border-dashed border-black p-8 text-center cursor-pointer transition-all ${
+                  className={`border-4 border-dashed border-black p-4 md:p-8 text-center cursor-pointer transition-all ${
                     isDragging
                       ? "bg-[#00FFFF] border-solid"
                       : selectedFile
@@ -368,15 +374,18 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                   {selectedFile ? (
                     <div className="flex flex-col items-center">
                       <div
-                        className="w-16 h-16 bg-black flex items-center justify-center mb-4 border-4 border-black"
+                        className="w-12 h-12 md:w-16 md:h-16 bg-black flex items-center justify-center mb-3 md:mb-4 border-4 border-black"
                         style={{ boxShadow: "4px 4px 0px #CCFF00" }}
                       >
-                        <CheckIcon size={32} className="text-[#CCFF00]" />
+                        <CheckIcon
+                          size={24}
+                          className="md:w-8 md:h-8 text-[#CCFF00]"
+                        />
                       </div>
-                      <p className="font-black text-black text-lg">
+                      <p className="font-black text-black text-base md:text-lg wrap-break-word text-center px-2">
                         {selectedFile.name}
                       </p>
-                      <p className="text-sm font-bold text-black/70 mt-1 uppercase">
+                      <p className="text-xs md:text-sm font-bold text-black/70 mt-1 uppercase">
                         {formatFileSize(selectedFile.size)}
                       </p>
                       <button
@@ -384,7 +393,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                           e.stopPropagation();
                           setSelectedFile(null);
                         }}
-                        className="mt-3 px-4 py-2 bg-[#FF006E] text-white font-bold text-sm uppercase border-2 border-black hover:bg-black transition-colors"
+                        className="mt-3 px-3 md:px-4 py-1.5 md:py-2 bg-[#FF006E] text-white font-bold text-xs md:text-sm uppercase border-2 border-black hover:bg-black transition-colors"
                       >
                         ✕ REMOVE
                       </button>
@@ -392,15 +401,18 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                   ) : (
                     <div className="flex flex-col items-center">
                       <div
-                        className="w-16 h-16 bg-[#00FFFF] flex items-center justify-center mb-4 border-4 border-black"
+                        className="w-12 h-12 md:w-16 md:h-16 bg-[#00FFFF] flex items-center justify-center mb-3 md:mb-4 border-4 border-black"
                         style={{ boxShadow: "4px 4px 0px #000000" }}
                       >
-                        <UploadIcon size={32} className="text-black" />
+                        <UploadIcon
+                          size={24}
+                          className="md:w-8 md:h-8 text-black"
+                        />
                       </div>
-                      <p className="font-black text-black text-lg uppercase">
+                      <p className="font-black text-black text-base md:text-lg uppercase">
                         DRAG & DROP PDF HERE
                       </p>
-                      <p className="text-sm font-bold text-black/60 mt-1 uppercase">
+                      <p className="text-xs md:text-sm font-bold text-black/60 mt-1 uppercase">
                         or click to browse
                       </p>
                     </div>
@@ -418,14 +430,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
                 {/* Advanced Settings Toggle - Only show when not expanded */}
                 {!showAdvanced && (
-                  <div className="mt-6">
+                  <div className="mt-4 md:mt-6">
                     <button
                       onClick={() => setShowAdvanced(!showAdvanced)}
-                      className="flex items-center gap-2 text-sm font-black text-black uppercase hover:text-[#FF006E] transition-colors duration-200"
+                      className="flex items-center gap-2 text-xs md:text-sm font-black text-black uppercase hover:text-[#FF006E] transition-colors duration-200"
                     >
-                      <SettingsIcon size={16} />
+                      <SettingsIcon size={14} className="md:w-4 md:h-4" />
                       <span>ADVANCED SETTINGS</span>
-                      <ChevronDownIcon size={16} />
+                      <ChevronDownIcon size={14} className="md:w-4 md:h-4" />
                     </button>
                   </div>
                 )}
@@ -434,14 +446,17 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               {/* Advanced Settings - Shown as second column when expanded */}
               {showAdvanced && (
                 <div
-                  className="opacity-0 animate-fadeInSmooth"
+                  className="opacity-0 animate-fadeInSmooth space-y-4 md:space-y-6"
                   style={{
                     animationFillMode: "forwards",
                   }}
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-black text-black uppercase">
-                      <SettingsIcon size={16} className="inline mr-2" />
+                  <div className="flex items-center justify-between mb-3 md:mb-4">
+                    <h3 className="text-xs md:text-sm font-black text-black uppercase">
+                      <SettingsIcon
+                        size={14}
+                        className="md:w-4 md:h-4 inline mr-2"
+                      />
                       ADVANCED SETTINGS
                     </h3>
                     <button
@@ -452,7 +467,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                     </button>
                   </div>
                   <div
-                    className="space-y-5 p-4 bg-white border-4 border-black"
+                    className="space-y-4 md:space-y-5 p-3 md:p-4 bg-white border-4 border-black"
                     style={{ boxShadow: "4px 4px 0px #000000" }}
                   >
                     {/* Processing Strategy */}
@@ -460,7 +475,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                       <label className="block text-xs font-black text-black uppercase tracking-wide mb-3">
                         ⚡ PROCESSING STRATEGY
                       </label>
-                      <div className="flex gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <button
                           onClick={() => {
                             setSettings((prev) => ({
@@ -469,7 +484,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                             }));
                             console.log("✅ Strategy changed to: hi_res");
                           }}
-                          className={`flex-1 p-3 border-4 border-black font-bold text-sm uppercase transition-all ${
+                          className={`p-3 border-4 border-black font-bold text-xs md:text-sm uppercase transition-all ${
                             settings.strategy === "hi_res"
                               ? "bg-[#00FFFF] text-black"
                               : "bg-white text-black hover:bg-[#FFFEF0]"
@@ -494,7 +509,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                             }));
                             console.log("✅ Strategy changed to: fast");
                           }}
-                          className={`flex-1 p-3 border-4 border-black font-bold text-sm uppercase transition-all ${
+                          className={`p-3 border-4 border-black font-bold text-xs md:text-sm uppercase transition-all ${
                             settings.strategy === "fast"
                               ? "bg-[#00FFFF] text-black"
                               : "bg-white text-black hover:bg-[#FFFEF0]"
@@ -519,7 +534,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                       <label className="block text-xs font-black text-black uppercase tracking-wide mb-2">
                         📏 CHUNK SIZE: {settings.max_chunk_size} CHARACTERS
                       </label>
-                      <p className="text-xs font-bold text-black/60 mb-3 uppercase">
+                      <p className="text-xs font-bold text-black/60 mb-2 md:mb-3 uppercase">
                         Smaller chunks = more precise, larger chunks = more
                         context
                       </p>
@@ -557,8 +572,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                     </div>
 
                     {/* AI Enhancement Toggle */}
-                    <div className="flex items-start justify-between p-3 bg-[#FFFEF0] border-2 border-black">
-                      <div className="flex-1">
+                    <div className="flex items-center justify-between gap-3 p-3 md:p-4 bg-[#FFFEF0] border-2 border-black">
+                      <div className="flex-1 min-w-0">
                         <label className="block text-xs font-black text-black uppercase tracking-wide">
                           🤖 AI-POWERED ENHANCEMENT
                         </label>
@@ -566,22 +581,24 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                           AI will generate summaries for tables and images
                         </p>
                       </div>
-                      <Switch
-                        checked={settings.enable_ai_enhancement}
-                        onChange={(v) => {
-                          setSettings((prev) => ({
-                            ...prev,
-                            enable_ai_enhancement: v,
-                          }));
-                          console.log("✅ AI Enhancement changed to:", v);
-                        }}
-                        label=""
-                      />
+                      <div className="shrink-0">
+                        <Switch
+                          checked={settings.enable_ai_enhancement}
+                          onChange={(v) => {
+                            setSettings((prev) => ({
+                              ...prev,
+                              enable_ai_enhancement: v,
+                            }));
+                            console.log("✅ AI Enhancement changed to:", v);
+                          }}
+                          label=""
+                        />
+                      </div>
                     </div>
 
                     {/* Auto-save to Pinecone Toggle */}
-                    <div className="flex items-start justify-between p-3 bg-[#FFFEF0] border-2 border-black">
-                      <div className="flex-1">
+                    <div className="flex items-center justify-between gap-3 p-3 md:p-4 bg-[#FFFEF0] border-2 border-black">
+                      <div className="flex-1 min-w-0">
                         <label className="block text-xs font-black text-black uppercase tracking-wide">
                           💾 AUTO-SAVE TO PINECONE
                         </label>
@@ -589,17 +606,19 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                           Disable if you want to review chunks first
                         </p>
                       </div>
-                      <Switch
-                        checked={settings.upsert_to_pinecone}
-                        onChange={(v) => {
-                          setSettings((prev) => ({
-                            ...prev,
-                            upsert_to_pinecone: v,
-                          }));
-                          console.log("✅ Upsert to Pinecone changed to:", v);
-                        }}
-                        label=""
-                      />
+                      <div className="shrink-0">
+                        <Switch
+                          checked={settings.upsert_to_pinecone}
+                          onChange={(v) => {
+                            setSettings((prev) => ({
+                              ...prev,
+                              upsert_to_pinecone: v,
+                            }));
+                            console.log("✅ Upsert to Pinecone changed to:", v);
+                          }}
+                          label=""
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -608,11 +627,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           )}
 
           {step === "processing" && (
-            <div className="py-8 text-center">
+            <div className="py-4 md:py-8 text-center">
               {/* Progress Bar */}
               {uploadProgress > 0 && uploadProgress < 100 && (
-                <div className="mb-6">
-                  <div className="w-full h-8 border-4 border-black bg-white relative overflow-hidden">
+                <div className="mb-4 md:mb-6">
+                  <div className="w-full h-6 md:h-8 border-4 border-black bg-white relative overflow-hidden">
                     <div
                       className="h-full bg-[#FFFF00] transition-all duration-300 flex items-center justify-center"
                       style={{
@@ -632,7 +651,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               )}
 
               {/* Neo-Brutalist Spinner */}
-              <div className="relative w-20 h-20 mx-auto mb-6">
+              <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 md:mb-6">
                 <div
                   className="absolute inset-0 border-4 border-black bg-[#FFFF00] animate-spin"
                   style={{
@@ -650,12 +669,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                 <div className="absolute inset-4 border-4 border-black bg-[#FF006E]" />
               </div>
 
-              <p className="text-black font-black text-xl uppercase">
+              <p className="text-black font-black text-base md:text-xl uppercase">
                 {uploadProgress < 100
                   ? "UPLOADING..."
                   : "PROCESSING DOCUMENT..."}
               </p>
-              <p className="text-sm font-bold text-black/60 mt-2 uppercase">
+              <p className="text-xs md:text-sm font-bold text-black/60 mt-2 uppercase px-2">
                 {settings.strategy === "hi_res"
                   ? "Using high-resolution extraction for maximum accuracy"
                   : "Using fast processing mode"}
@@ -667,7 +686,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               )}
 
               {/* Dynamic Processing Steps */}
-              <div className="mt-6 space-y-3">
+              <div className="mt-4 md:mt-6 space-y-2 md:space-y-3">
                 {[
                   {
                     icon: "📄",
@@ -702,7 +721,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                 ].map((stepItem, idx) => (
                   <div
                     key={idx}
-                    className={`flex items-center gap-3 text-sm font-bold transition-all duration-300 ${
+                    className={`flex items-center gap-2 md:gap-3 text-xs md:text-sm font-bold transition-all duration-300 ${
                       stepItem.show
                         ? "opacity-100 translate-x-0"
                         : "opacity-0 -translate-x-4"
@@ -711,16 +730,18 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                       transitionDelay: stepItem.show ? "0ms" : "0ms",
                     }}
                   >
-                    <span className="text-lg">{stepItem.icon}</span>
+                    <span className="text-base md:text-lg">
+                      {stepItem.icon}
+                    </span>
                     <span
-                      className={`${
+                      className={`flex-1 text-left ${
                         stepItem.show ? "text-black" : "text-black/30"
                       }`}
                     >
                       {stepItem.text}
                     </span>
                     {stepItem.show && currentStep > idx && (
-                      <span className="ml-auto text-[#CCFF00] text-lg animate-fadeIn">
+                      <span className="text-[#CCFF00] text-base md:text-lg animate-fadeIn shrink-0">
                         ✓
                       </span>
                     )}
@@ -734,23 +755,23 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             <div className="text-center">
               {/* Success Icon */}
               <div
-                className="w-16 h-16 mx-auto mb-4 bg-[#CCFF00] border-4 border-black flex items-center justify-center"
+                className="w-14 h-14 md:w-16 md:h-16 mx-auto mb-3 md:mb-4 bg-[#CCFF00] border-4 border-black flex items-center justify-center"
                 style={{ boxShadow: "6px 6px 0px #000000" }}
               >
-                <CheckIcon size={32} className="text-black" />
+                <CheckIcon size={28} className="md:w-8 md:h-8 text-black" />
               </div>
 
               {/* File Info */}
-              <p className="text-black font-black text-lg mb-2">
+              <p className="text-black font-black text-base md:text-lg mb-2 wrap-break-word px-2">
                 {processResponse.filename}
               </p>
-              <p className="inline-block px-3 py-1 bg-[#00FFFF] border-2 border-black text-xs font-bold uppercase">
+              <p className="inline-block px-2 md:px-3 py-1 bg-[#00FFFF] border-2 border-black text-xs font-bold uppercase">
                 {processResponse.processing_stats.total_pages} PAGES •{" "}
                 {processResponse.total_chunks} CHUNKS
               </p>
 
               {/* Processing Stats */}
-              <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="mt-3 md:mt-4 grid grid-cols-2 gap-2">
                 <div className="p-2 bg-white border-2 border-black">
                   <p className="text-xl font-black text-[#FF006E]">
                     {processResponse.processing_stats.ai_enhanced_chunks}
@@ -801,7 +822,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                 )}
 
               {/* Action Buttons */}
-              <div className="mt-4 space-y-2">
+              <div className="mt-3 md:mt-4 space-y-2">
                 <Button
                   variant="primary"
                   size="md"
@@ -835,14 +856,19 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
         {/* Footer */}
         {step === "upload" && (
-          <div className="flex justify-end gap-3 px-6 py-4 bg-white border-t-4 border-black">
-            <Button variant="ghost" onClick={handleClose}>
+          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 px-4 md:px-6 py-3 md:py-4 bg-white border-t-4 border-black">
+            <Button
+              variant="ghost"
+              onClick={handleClose}
+              className="w-full sm:w-auto order-2 sm:order-1"
+            >
               CANCEL
             </Button>
             <Button
               variant="primary"
               onClick={handleUpload}
               disabled={!selectedFile || (!namespace && !newNamespace)}
+              className="w-full sm:w-auto order-1 sm:order-2"
             >
               {!selectedFile || (!namespace && !newNamespace)
                 ? "SELECT FILE & NAMESPACE"
