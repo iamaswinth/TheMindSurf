@@ -20,9 +20,6 @@ import {
 } from "@/lib/hooks/use-namespaces";
 import Link from "next/link";
 
-// Color palette for namespace cards
-const cardColors = ["cyan", "lime", "pink", "yellow", "white"] as const;
-
 export default function NamespacesPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -204,11 +201,7 @@ export default function NamespacesPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {filteredNamespaces.map((ns, index) => (
-                  <Card
-                    key={ns.id}
-                    color={cardColors[index % cardColors.length]}
-                    className="p-0 overflow-hidden"
-                  >
+                  <Card key={ns.id} className="p-0 overflow-hidden">
                     <div className="p-4 md:p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
