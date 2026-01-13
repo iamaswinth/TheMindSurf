@@ -358,7 +358,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full max-h-full bg-white border-3 md:border-4 border-black shadow-[4px_4px_0px_#000] md:shadow-[8px_8px_0px_#000]">
+    <div className="flex flex-col h-full max-h-full bg-white border-3 md:border-4 border-black shadow-[4px_4px_0px_#000] md:shadow-[8px_8px_0px_#000] pt-14 lg:pt-0">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 space-y-3 md:space-y-6 bg-[#FFFEF0]">
         {messages.length === 0 ? (
