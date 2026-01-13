@@ -49,7 +49,7 @@ const LoadingStepsIndicator: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-3 min-w-[300px]">
+    <div className="space-y-3 w-full max-w-[300px]">
       {steps.map((step, index) => (
         <div
           key={index}
@@ -58,7 +58,7 @@ const LoadingStepsIndicator: React.FC = () => {
           }`}
         >
           <div
-            className={`w-8 h-8 border-2 border-black flex items-center justify-center text-lg transition-all duration-300 ${
+            className={`w-8 h-8 shrink-0 border-2 border-black flex items-center justify-center text-lg transition-all duration-300 ${
               index === currentStep
                 ? "bg-[#FFFF00] shadow-[2px_2px_0px_#000] scale-110"
                 : index < currentStep
@@ -68,9 +68,9 @@ const LoadingStepsIndicator: React.FC = () => {
           >
             {index < currentStep ? "✓" : step.icon}
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <p
-              className={`text-sm font-bold uppercase ${
+              className={`text-xs md:text-sm font-bold uppercase truncate ${
                 index === currentStep
                   ? "text-black"
                   : index < currentStep
@@ -416,13 +416,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   setInput(e.target.value);
                   // Auto-resize textarea
                   e.target.style.height = "auto";
-                  e.target.style.height =
-                    Math.min(e.target.scrollHeight, 150) + "px";
+                  const newHeight = Math.min(e.target.scrollHeight, 150);
+                  e.target.style.height = newHeight + "px";
+                  // Only show scrollbar when content exceeds max height
+                  e.target.style.overflowY = e.target.scrollHeight > 150 ? "auto" : "hidden";
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask a question..."
                 rows={1}
-                className="w-full px-4 py-3 md:px-5 md:py-4 border-3 border-black bg-white text-black font-semibold placeholder:text-black/50 placeholder:font-medium rounded-2xl shadow-[3px_3px_0px_#000] focus:outline-none focus:shadow-[4px_4px_0px_#000] focus:border-[#FF006E] resize-none transition-all text-base"
+                className="w-full px-4 py-3 md:px-5 md:py-4 border-3 border-black bg-white text-black font-semibold placeholder:text-black/50 placeholder:font-medium rounded-2xl shadow-[3px_3px_0px_#000] focus:outline-none focus:shadow-[4px_4px_0px_#000] focus:border-[#FF006E] resize-none transition-all text-base overflow-y-hidden"
                 style={{ minHeight: "48px", maxHeight: "150px" }}
               />
             </div>
