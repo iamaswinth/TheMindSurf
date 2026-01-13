@@ -419,7 +419,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   const newHeight = Math.min(e.target.scrollHeight, 150);
                   e.target.style.height = newHeight + "px";
                   // Only show scrollbar when content exceeds max height
-                  e.target.style.overflowY = e.target.scrollHeight > 150 ? "auto" : "hidden";
+                  e.target.style.overflowY =
+                    e.target.scrollHeight > 150 ? "auto" : "hidden";
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask a question..."

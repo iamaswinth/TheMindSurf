@@ -17,34 +17,34 @@ const spaceMono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TheMindSurf",
+  title: "TheMindSurf - AI-Powered Document Chat & Analysis Platform",
   description:
-    "Chat with your documents using AI-powered RAG - Neo-Brutalist Edition",
-  keywords: ["RAG", "AI", "Chat", "Documents", "Machine Learning", "Q&A"],
+    "Transform how you interact with documents. Chat with PDFs, extract insights, and get AI-powered answers instantly using advanced RAG technology.",
+  keywords: [
+    "RAG",
+    "AI",
+    "Chat",
+    "Documents",
+    "Machine Learning",
+    "Q&A",
+    "PDF",
+    "Document Analysis",
+  ],
   authors: [{ name: "TheMindSurf" }],
   openGraph: {
-    title: "TheMindSurf - AI-Powered Document Chat",
+    title: "TheMindSurf - AI-Powered Document Chat & Analysis Platform",
     description:
-      "Chat with your documents using AI-powered RAG - Neo-Brutalist Edition",
+      "Transform how you interact with documents. Chat with PDFs, extract insights, and get AI-powered answers instantly using advanced RAG technology.",
     url: "https://the-mind-surf-69.vercel.app",
     siteName: "TheMindSurf",
-    images: [
-      {
-        url: "https://the-mind-surf-69.vercel.app/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "TheMindSurf - AI-Powered Document Chat",
-      },
-    ],
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "TheMindSurf - AI-Powered Document Chat",
+    title: "TheMindSurf - AI-Powered Document Chat & Analysis Platform",
     description:
-      "Chat with your documents using AI-powered RAG - Neo-Brutalist Edition",
-    images: ["https://the-mind-surf-69.vercel.app/og-image.png"],
+      "Transform how you interact with documents. Chat with PDFs, extract insights, and get AI-powered answers instantly using advanced RAG technology.",
   },
   metadataBase: new URL("https://the-mind-surf-69.vercel.app"),
 };

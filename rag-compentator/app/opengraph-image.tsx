@@ -4,7 +4,7 @@ import { ImageResponse } from "next/og";
 export const runtime = "edge";
 
 // Image metadata
-export const alt = "TheMindSurf - AI-Powered Document Chat";
+export const alt = "TheMindSurf - AI-Powered Document Chat & Analysis Platform";
 export const size = {
   width: 1200,
   height: 630,
@@ -67,57 +67,59 @@ export default async function Image() {
             💬
           </div>
 
-          {/* Title */}
+          {/* Headline */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              gap: "20px",
+              gap: "16px",
             }}
           >
             <h1
               style={{
-                fontSize: "72px",
+                fontSize: "80px",
                 fontWeight: 900,
                 color: "black",
                 margin: 0,
                 textTransform: "uppercase",
-                letterSpacing: "-2px",
+                letterSpacing: "-3px",
+                textAlign: "center",
               }}
             >
-              TheMindSurf
+              CHAT WITH ANY DOCUMENT
             </h1>
             <div
               style={{
                 backgroundColor: "#FFFF00",
                 border: "6px solid black",
-                padding: "20px 40px",
+                padding: "16px 32px",
                 boxShadow: "8px 8px 0px #000",
               }}
             >
               <p
                 style={{
-                  fontSize: "36px",
+                  fontSize: "32px",
                   fontWeight: 700,
                   color: "black",
                   margin: 0,
                   textTransform: "uppercase",
+                  textAlign: "center",
                 }}
               >
-                Chat with your documents
+                Get AI-Powered Answers Instantly
               </p>
             </div>
             <p
               style={{
-                fontSize: "28px",
+                fontSize: "24px",
                 fontWeight: 600,
                 color: "#666",
                 margin: 0,
-                textTransform: "uppercase",
+                textAlign: "center",
               }}
             >
-              AI-Powered RAG • Neo-Brutalist Edition
+              TheMindSurf • Advanced RAG Technology
             </p>
           </div>
 
@@ -126,7 +128,7 @@ export default async function Image() {
             style={{
               display: "flex",
               gap: "20px",
-              marginTop: "20px",
+              marginTop: "16px",
             }}
           >
             <div
@@ -166,6 +168,30 @@ export default async function Image() {
             >
               📚 MULTI-DOC
             </div>
+          </div>
+
+          {/* Call-to-Action */}
+          <div
+            style={{
+              marginTop: "32px",
+              backgroundColor: "#FF006E",
+              border: "6px solid black",
+              padding: "20px 60px",
+              boxShadow: "12px 12px 0px #000",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "36px",
+                fontWeight: 900,
+                color: "white",
+                margin: 0,
+                textTransform: "uppercase",
+                letterSpacing: "2px",
+              }}
+            >
+              START CHATTING NOW →
+            </p>
           </div>
         </div>
       </div>
