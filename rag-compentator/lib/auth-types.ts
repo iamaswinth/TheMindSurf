@@ -7,6 +7,7 @@ export interface User {
   role: "user" | "admin";
   credits: number;
   is_active: boolean;
+  status?: "active" | "inactive";
   auth_method: "email" | "github" | "both";
   github_username: string | null;
   avatar_url: string | null;

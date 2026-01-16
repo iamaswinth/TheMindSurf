@@ -295,12 +295,12 @@ export function ProfileContent() {
               </span>
               <span
                 className={`px-4 py-2 border-4 border-black text-sm font-black uppercase shadow-[2px_2px_0px_#000] ${
-                  user.status === "active"
+                  user.status === "active" || user.is_active
                     ? "bg-[#00FF00] text-black"
                     : "bg-[#FF006E] text-white"
                 }`}
               >
-                {user.status}
+                {user.status || (user.is_active ? "active" : "inactive")}
               </span>
               {user.role === "admin" && (
                 <span className="px-4 py-2 bg-[#FF006E] border-4 border-black text-white text-sm font-black uppercase shadow-[2px_2px_0px_#000]">
