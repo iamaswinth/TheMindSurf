@@ -6,9 +6,9 @@ processing. It integrates all services to create a complete document
 processing pipeline.
 
 Endpoints:
-- GET /documents: List all documents
-- GET /documents/{id}: Get document details
-- DELETE /documents/{id}: Delete a document
+- GET /documents: List all documents (user's own documents)
+- GET /documents/{id}: Get document details (user's own documents)
+- DELETE /documents/{id}: Delete a document (user's own documents)
 - POST /documents/process-multimodal: Full multimodal PDF processing
 - GET /documents/health: Health check with AI status
 
@@ -16,7 +16,7 @@ The multimodal endpoint provides:
 - PDF text extraction
 - Table extraction with HTML structure
 - Image extraction with base64 encoding
-- AI-enhanced summaries for visual content
+- AI-enhanced summaries for visual content (costs 1 credit)
 - Semantic chunking for RAG optimization
 """
 
@@ -52,7 +52,9 @@ from app.services.chunking_service import (
     ChunkingService,
     ChunkingServiceError,
 )
+from app.services.credit_service import CreditService, InsufficientCreditsError
 from app.core.config import settings
+from app.core.dependencies import AuthenticatedUser, OptionalUser
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -143,6 +145,7 @@ def _format_document_response(doc: dict, namespace_name: Optional[str] = None) -
     summary="List all documents"
 )
 async def list_documents(
+    current_user: AuthenticatedUser,
     namespace_id: Optional[str] = Query(
         default=None,
         description="Filter by namespace ID"
@@ -155,9 +158,10 @@ async def list_documents(
     limit: int = Query(default=10, ge=1, le=100, description="Results per page"),
 ):
     """
-    List all documents from NeonDB.
+    List all documents from NeonDB for the current user.
     
     Supports filtering by namespace and pagination.
+    Users can only see their own documents.
     """
     if not settings.is_database_available:
         raise HTTPException(
@@ -186,22 +190,50 @@ async def list_documents(
                     }
                 )
             
-            # Get namespace info for name
+            # Get namespace info for name and verify ownership
             ns_info = await DocumentRepository.get_namespace_by_id(ns_uuid)
+            if not ns_info:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail={
+                        "code": "NAMESPACE_NOT_FOUND",
+                        "message": "Namespace not found"
+                    }
+                )
+            
+            # Check namespace ownership
+            if ns_info.get("user_id") and ns_info["user_id"] != current_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail={
+                        "code": "ACCESS_DENIED",
+                        "message": "You do not have access to this namespace"
+                    }
+                )
+            
             namespace_name = ns_info["name"] if ns_info else None
             
-            documents = await DocumentRepository.get_documents_by_namespace_id(ns_uuid, limit=limit)
+            documents = await DocumentRepository.get_documents_by_namespace_id(
+                ns_uuid, 
+                limit=limit,
+                user_id=current_user.id
+            )
             # Apply offset manually for now
             documents = documents[offset:offset + limit] if offset < len(documents) else []
-            total = len(await DocumentRepository.get_documents_by_namespace_id(ns_uuid, limit=10000))
+            total = len(await DocumentRepository.get_documents_by_namespace_id(
+                ns_uuid, 
+                limit=10000,
+                user_id=current_user.id
+            ))
         else:
-            # List all documents with optional namespace filter
+            # List all documents with optional namespace filter - filtered by user
             documents = await DocumentRepository.list_documents(
                 namespace=namespace,
                 limit=limit,
-                offset=offset
+                offset=offset,
+                user_id=current_user.id
             )
-            total = await DocumentRepository.get_document_count()
+            total = await DocumentRepository.get_document_count(user_id=current_user.id)
         
         formatted_docs = [
             _format_document_response(doc, namespace_name if namespace_id else None)
@@ -233,11 +265,12 @@ async def list_documents(
     response_model=DocumentDetailResponse,
     summary="Get document details"
 )
-async def get_document(document_id: str):
+async def get_document(document_id: str, current_user: AuthenticatedUser):
     """
     Get detailed information about a specific document.
     
     Returns document metadata and processing statistics.
+    Users can only access their own documents.
     """
     if not settings.is_database_available:
         raise HTTPException(
@@ -271,6 +304,16 @@ async def get_document(document_id: str):
                 detail={
                     "code": "DOCUMENT_NOT_FOUND",
                     "message": f"Document {document_id} not found"
+                }
+            )
+        
+        # Check document ownership
+        if document.get("user_id") and document["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "ACCESS_DENIED",
+                    "message": "You do not have access to this document"
                 }
             )
         
@@ -319,7 +362,7 @@ async def get_document(document_id: str):
     response_model=DocumentDeleteResponse,
     summary="Delete a document"
 )
-async def delete_document(document_id: str):
+async def delete_document(document_id: str, current_user: AuthenticatedUser):
     """
     Delete a document from both NeonDB and Pinecone.
     
@@ -327,6 +370,8 @@ async def delete_document(document_id: str):
     1. Gets document info from NeonDB
     2. Deletes all vectors from Pinecone for this document
     3. Deletes the document record from NeonDB
+    
+    Users can only delete their own documents.
     """
     if not settings.is_database_available:
         raise HTTPException(
@@ -361,6 +406,16 @@ async def delete_document(document_id: str):
                 detail={
                     "code": "DOCUMENT_NOT_FOUND",
                     "message": f"Document {document_id} not found"
+                }
+            )
+        
+        # Check document ownership
+        if document.get("user_id") and document["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "ACCESS_DENIED",
+                    "message": "You do not have access to this document"
                 }
             )
         
@@ -444,6 +499,10 @@ async def delete_document(document_id: str):
     - Original content preserved for reference
     - Detailed processing statistics
     
+    **Credits:**
+    - AI-enhanced upload: 1 credit
+    - Regular upload (no AI): Free
+    
     **Performance Notes:**
     - 'hi_res' strategy is more accurate but slower
     - 'fast' strategy is quicker but may miss complex content
@@ -467,10 +526,14 @@ async def delete_document(document_id: str):
                     }
                 }
             }
+        },
+        402: {
+            "description": "Insufficient credits for AI-enhanced upload"
         }
     }
 )
 async def process_multimodal(
+    current_user: AuthenticatedUser,
     file: UploadFile = File(
         ...,
         description="PDF file to process"
@@ -487,7 +550,7 @@ async def process_multimodal(
     ),
     enable_ai_enhancement: bool = Query(
         default=True,
-        description="Enable AI-powered summaries for multimodal content"
+        description="Enable AI-powered summaries for multimodal content (costs 1 credit)"
     ),
     upsert_to_pinecone: bool = Query(
         default=True,
@@ -530,12 +593,31 @@ async def process_multimodal(
     """
     start_time = time.time()
     warnings: list[str] = []
+    credits_deducted = 0
     
     logger.info(
         f"Processing request: file={file.filename}, "
         f"strategy={strategy.value}, "
-        f"ai_enabled={enable_ai_enhancement}"
+        f"ai_enabled={enable_ai_enhancement}, "
+        f"user={current_user.email}"
     )
+    
+    # =========================================================================
+    # Step 0: Check Credits for AI Enhancement
+    # =========================================================================
+    
+    if enable_ai_enhancement:
+        credit_cost = await CreditService.get_credit_cost_for_upload(True)
+        if not await CreditService.check_credits(current_user.id, credit_cost):
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail={
+                    "code": "INSUFFICIENT_CREDITS",
+                    "message": f"Insufficient credits. AI-enhanced upload requires {credit_cost} credit(s). You have {current_user.credits} credits.",
+                    "required": credit_cost,
+                    "available": current_user.credits
+                }
+            )
     
     # =========================================================================
     # Step 1: Validate File
@@ -748,16 +830,20 @@ async def process_multimodal(
             # Determine namespace to use
             namespace_name = pinecone_namespace or settings.PINECONE_NAMESPACE
             
-            # Ensure namespace exists
-            namespace_record = await DocumentRepository.get_namespace_by_name(namespace_name)
+            # Ensure namespace exists for this user
+            namespace_record = await DocumentRepository.get_namespace_by_name_and_user(
+                namespace_name, 
+                current_user.id
+            )
             if not namespace_record:
                 namespace_record = await DocumentRepository.create_namespace(
                     name=namespace_name,
                     description=f"Auto-created namespace for {namespace_name}",
                     default_dense_namespace=namespace_name,
                     default_sparse_namespace=namespace_name,
+                    user_id=current_user.id,
                 )
-                logger.info(f"Created new namespace: {namespace_name}")
+                logger.info(f"Created new namespace: {namespace_name} for user {current_user.email}")
             
             # Count chunks with tables/images
             chunks_with_tables = sum(
@@ -768,6 +854,9 @@ async def process_multimodal(
                 1 for c in multimodal_chunks 
                 if ContentType.IMAGE in c.content_types
             )
+            
+            # Calculate credit cost
+            credit_cost = await CreditService.get_credit_cost_for_upload(ai_actually_enabled)
             
             # Create document record - THIS GENERATES THE document_id
             doc_record = await DocumentRepository.create_document(
@@ -782,9 +871,32 @@ async def process_multimodal(
                 total_chunks_with_tables=chunks_with_tables,
                 total_chunks_with_images=chunks_with_images,
                 ai_enhancement_enabled=ai_actually_enabled,
+                user_id=current_user.id,
+                credits_used=credit_cost,
             )
             
             document_id = str(doc_record['id'])  # Convert UUID to string for Pinecone
+            
+            # Deduct credits if AI enhancement was used
+            if credit_cost > 0:
+                try:
+                    await CreditService.deduct_credits(
+                        user_id=current_user.id,
+                        amount=credit_cost,
+                        document_id=doc_record['id'],
+                        reason=f"AI-enhanced upload: {file.filename}"
+                    )
+                    credits_deducted = credit_cost
+                    warnings.append(f"Deducted {credit_cost} credit(s) for AI-enhanced upload. Remaining: {current_user.credits - credit_cost}")
+                except InsufficientCreditsError as e:
+                    # This shouldn't happen since we checked earlier, but handle it
+                    raise HTTPException(
+                        status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                        detail={
+                            "code": "INSUFFICIENT_CREDITS",
+                            "message": e.message
+                        }
+                    )
             
             # Link document to namespace
             await DocumentRepository.link_document_to_namespace(

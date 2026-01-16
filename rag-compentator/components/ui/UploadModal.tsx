@@ -15,6 +15,7 @@ import {
   Namespace,
   MultimodalProcessResponse,
 } from "@/lib/types";
+import { authApi } from "@/lib/auth-api";
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -190,8 +191,19 @@ export const UploadModal: React.FC<UploadModalProps> = ({
       const response = await onUpload(selectedFile, uploadSettings);
       setProcessResponse(response);
       setStep("success");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+    } catch (err: any) {
+      // Check if it's a 402 Payment Required error
+      if (
+        err?.status === 402 ||
+        err?.response?.status === 402 ||
+        err?.message?.includes("402")
+      ) {
+        setError(
+          "💳 Insufficient credits! AI enhancement requires credits. Please disable AI enhancement or contact admin to grant you credits."
+        );
+      } else {
+        setError(err instanceof Error ? err.message : "Upload failed");
+      }
       setStep("upload");
     }
   };
@@ -424,7 +436,32 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                     className="mt-4 p-3 bg-[#FF006E] border-4 border-black text-white font-bold text-sm"
                     style={{ boxShadow: "4px 4px 0px #000000" }}
                   >
-                    ⚠️ {error}
+                    <div className="flex flex-col gap-2">
+                      <div>⚠️ {error}</div>
+                      {error.includes("Insufficient credits") && (
+                        <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                          {settings.enable_ai_enhancement && (
+                            <button
+                              onClick={() => {
+                                setSettings((prev) => ({
+                                  ...prev,
+                                  enable_ai_enhancement: false,
+                                }));
+                                setError(null);
+                              }}
+                              className="px-3 py-2 bg-white hover:bg-[#FFFF00] text-black font-black text-xs uppercase border-2 border-black transition-colors"
+                              style={{ boxShadow: "2px 2px 0px #000000" }}
+                            >
+                              🔧 DISABLE AI & RETRY
+                            </button>
+                          )}
+                          <RequestCreditsButton
+                            onSuccess={() => setError(null)}
+                            onError={(msg) => setError(msg)}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -878,6 +915,169 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         )}
       </div>
     </div>
+  );
+};
+
+// =============================================================================
+// Request Credits Button Component
+// =============================================================================
+
+interface RequestCreditsButtonProps {
+  onSuccess?: () => void;
+  onError?: (message: string) => void;
+}
+
+const RequestCreditsButton: React.FC<RequestCreditsButtonProps> = ({
+  onSuccess,
+  onError,
+}) => {
+  const [showModal, setShowModal] = useState(false);
+  const [amount, setAmount] = useState(3);
+  const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
+      await authApi.requestCredits(amount, reason || undefined);
+      setSuccess(true);
+      onSuccess?.();
+      // Auto close after 2 seconds
+      setTimeout(() => {
+        setShowModal(false);
+        setSuccess(false);
+        setAmount(10);
+        setReason("");
+      }, 2000);
+    } catch (err: any) {
+      const message = err?.message?.includes("PENDING_REQUEST_EXISTS")
+        ? "You already have a pending credit request. Please wait for admin review."
+        : "Failed to submit credit request. Please try again.";
+      onError?.(message);
+      setShowModal(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setShowModal(true)}
+        className="px-3 py-2 bg-[#00FFFF] hover:bg-[#FFFF00] text-black font-black text-xs uppercase border-2 border-black transition-colors"
+        style={{ boxShadow: "2px 2px 0px #000000" }}
+      >
+        💳 REQUEST CREDITS
+      </button>
+
+      {showModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+          <div
+            className="bg-white border-4 border-black w-full max-w-sm"
+            style={{ boxShadow: "8px 8px 0px #000000" }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 bg-[#00FFFF] border-b-4 border-black">
+              <h3 className="text-lg font-black text-black uppercase">
+                💳 REQUEST CREDITS
+              </h3>
+              <button
+                onClick={() => setShowModal(false)}
+                className="w-8 h-8 bg-black text-white flex items-center justify-center hover:bg-[#FF006E] transition-colors border-2 border-black"
+              >
+                <XIcon size={16} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-4 bg-[#FFFEF0]">
+              {success ? (
+                <div className="text-center py-4">
+                  <div
+                    className="w-12 h-12 mx-auto mb-3 bg-[#00FF00] border-4 border-black flex items-center justify-center"
+                    style={{ boxShadow: "4px 4px 0px #000000" }}
+                  >
+                    <CheckIcon size={24} className="text-black" />
+                  </div>
+                  <p className="font-black text-black uppercase">
+                    REQUEST SUBMITTED!
+                  </p>
+                  <p className="text-xs font-bold text-black/60 mt-1 uppercase">
+                    An admin will review your request soon
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-xs font-bold text-black/60 uppercase">
+                    Request additional credits from administrators
+                  </p>
+
+                  {/* Amount */}
+                  <div>
+                    <label className="block text-xs font-black text-black uppercase mb-2">
+                      AMOUNT
+                    </label>
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={(e) =>
+                        setAmount(
+                          Math.min(
+                            100,
+                            Math.max(1, parseInt(e.target.value) || 1)
+                          )
+                        )
+                      }
+                      min="1"
+                      max="100"
+                      className="w-full px-3 py-2 border-4 border-black text-black font-bold focus:outline-none focus:ring-4 focus:ring-[#00FFFF]"
+                      style={{ boxShadow: "3px 3px 0px #000000" }}
+                    />
+                  </div>
+
+                  {/* Reason */}
+                  <div>
+                    <label className="block text-xs font-black text-black uppercase mb-2">
+                      REASON (OPTIONAL)
+                    </label>
+                    <textarea
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      placeholder="Why do you need credits?"
+                      rows={3}
+                      className="w-full px-3 py-2 border-4 border-black text-black font-bold placeholder-black/40 focus:outline-none focus:ring-4 focus:ring-[#00FFFF] resize-none"
+                      style={{ boxShadow: "3px 3px 0px #000000" }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {!success && (
+              <div className="flex justify-end gap-2 px-4 py-3 bg-white border-t-4 border-black">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 text-sm font-black uppercase bg-white hover:bg-[#FF006E] hover:text-white text-black border-2 border-black transition-colors"
+                  style={{ boxShadow: "2px 2px 0px #000000" }}
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading || amount <= 0}
+                  className="px-4 py-2 text-sm font-black uppercase bg-[#00FF00] hover:bg-[#00FFFF] disabled:opacity-50 disabled:cursor-not-allowed text-black border-2 border-black transition-colors"
+                  style={{ boxShadow: "2px 2px 0px #000000" }}
+                >
+                  {loading ? "SUBMITTING..." : "SUBMIT REQUEST"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

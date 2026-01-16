@@ -70,12 +70,20 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
   );
 
   // Filter documents based on selected namespace and search
-  const filteredDocuments = namespaceDocuments.filter(
-    (doc) => doc.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredDocuments = namespaceDocuments.filter((doc) =>
+    doc.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Handle document selection
   const handleDocumentToggle = (docId: string) => {
+    // Find the document to get its namespace
+    const doc = documents.find((d) => d.id === docId);
+
+    // Auto-select the document's namespace if it's different from current
+    if (doc && doc.namespace !== selectedNamespace) {
+      setSelectedNamespace(doc.namespace);
+    }
+
     if (selectedMode === "single") {
       setSelectedDocuments([docId]);
     } else if (selectedMode === "multi") {
@@ -84,6 +92,10 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
       } else if (selectedDocuments.length < 5) {
         setSelectedDocuments([...selectedDocuments, docId]);
       }
+    } else if (selectedMode === "namespace") {
+      // Auto-switch from namespace mode to single document mode when clicking a document
+      setSelectedMode("single");
+      setSelectedDocuments([docId]);
     }
   };
 
@@ -342,18 +354,19 @@ export const ContextSwitcher: React.FC<ContextSwitcherProps> = ({
                 filteredDocuments.map((doc) => {
                   const isSelected = selectedDocuments.includes(doc.id);
 
-                  // For namespace mode, show as read-only list
+                  // For namespace mode, show as clickable to auto-switch to single mode
                   if (selectedMode === "namespace") {
                     return (
-                      <div
+                      <button
                         key={doc.id}
-                        className="flex items-center gap-3 px-4 py-3 text-left border-b border-white/10 last:border-b-0 text-white/80"
+                        onClick={() => handleDocumentToggle(doc.id)}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left border-b border-white/10 last:border-b-0 text-white/80 hover:bg-white/10 transition-colors"
                       >
                         <span className="text-lg">📄</span>
                         <span className="flex-1 font-semibold text-sm truncate">
                           {doc.name}
                         </span>
-                      </div>
+                      </button>
                     );
                   }
 

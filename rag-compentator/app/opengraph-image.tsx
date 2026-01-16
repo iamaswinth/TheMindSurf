@@ -47,7 +47,7 @@ export default async function Image() {
             alignItems: "center",
             justifyContent: "center",
             gap: "40px",
-            zIndex: 10,
+            zIndex: "10",
           }}
         >
           {/* Logo/Icon */}
@@ -91,6 +91,7 @@ export default async function Image() {
             </h1>
             <div
               style={{
+                display: "flex",
                 backgroundColor: "#FFFF00",
                 border: "6px solid black",
                 padding: "16px 32px",
@@ -173,6 +174,7 @@ export default async function Image() {
           {/* Call-to-Action */}
           <div
             style={{
+              display: "flex",
               marginTop: "32px",
               backgroundColor: "#FF006E",
               border: "6px solid black",

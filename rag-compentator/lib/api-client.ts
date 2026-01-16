@@ -46,19 +46,58 @@ class ApiClient {
       typeof window !== "undefined"
         ? process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"
         : process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+
+    // Load token from localStorage on initialization
+    // Use same key as auth-api.ts: rag_access_token
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("rag_access_token");
+      if (stored) {
+        this.token = stored;
+      }
+    }
   }
 
-  setToken(token: string) {
+  setToken(token: string | undefined) {
     this.token = token;
+    if (typeof window !== "undefined") {
+      if (token) {
+        localStorage.setItem("rag_access_token", token);
+      } else {
+        localStorage.removeItem("rag_access_token");
+      }
+    }
+  }
+
+  getToken(): string | undefined {
+    return this.token;
+  }
+
+  // Sync token from localStorage (call after login in auth-api)
+  syncTokenFromStorage() {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("rag_access_token");
+      if (stored) {
+        this.token = stored;
+      }
+    }
+  }
+
+  clearToken() {
+    this.token = undefined;
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("rag_access_token");
+      localStorage.removeItem("rag_refresh_token");
+    }
   }
 
   private async request<T>(
     endpoint: string,
-    options?: RequestInit
+    options?: RequestInit,
+    skipAuth = false
   ): Promise<T> {
     const headers: HeadersInit = {
       "Content-Type": "application/json",
-      ...(this.token && { Authorization: `Bearer ${this.token}` }),
+      ...(this.token && !skipAuth && { Authorization: `Bearer ${this.token}` }),
       ...options?.headers,
     };
 
@@ -67,6 +106,19 @@ class ApiClient {
         ...options,
         headers,
       });
+
+      // Handle 401 Unauthorized - try to refresh token
+      if (
+        response.status === 401 &&
+        !skipAuth &&
+        !endpoint.includes("/auth/")
+      ) {
+        const refreshed = await this.tryRefreshToken();
+        if (refreshed) {
+          // Retry the request with new token
+          return this.request<T>(endpoint, options, skipAuth);
+        }
+      }
 
       if (!response.ok) {
         const error = await response
@@ -85,6 +137,36 @@ class ApiClient {
         throw error;
       }
       throw new ApiError("Network error", 0);
+    }
+  }
+
+  private async tryRefreshToken(): Promise<boolean> {
+    if (typeof window === "undefined") return false;
+
+    const refreshToken = localStorage.getItem("rag_refresh_token");
+    if (!refreshToken) return false;
+
+    try {
+      const response = await fetch(`${this.baseURL}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!response.ok) {
+        // Refresh failed, clear all tokens
+        this.clearToken();
+        return false;
+      }
+
+      const data = await response.json();
+      this.setToken(data.access_token);
+      if (data.refresh_token) {
+        localStorage.setItem("rag_refresh_token", data.refresh_token);
+      }
+      return true;
+    } catch {
+      return false;
     }
   }
 

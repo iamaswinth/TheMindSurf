@@ -6,10 +6,10 @@ Namespaces are stored in NeonDB and used to organize documents and their
 vectors in Pinecone.
 
 Endpoints:
-- GET /namespaces: List all namespaces
-- GET /namespaces/{id}: Get namespace details
-- POST /namespaces: Create a new namespace
-- DELETE /namespaces/{id}: Delete a namespace and all its documents
+- GET /namespaces: List all namespaces (user's own namespaces)
+- GET /namespaces/{id}: Get namespace details (user's own namespaces)
+- POST /namespaces: Create a new namespace (for the current user)
+- DELETE /namespaces/{id}: Delete a namespace and all its documents (user's own)
 """
 
 import logging
@@ -28,6 +28,7 @@ from app.models.schemas import (
 )
 from app.db.repository import DocumentRepository
 from app.core.config import settings
+from app.core.dependencies import AuthenticatedUser
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -64,11 +65,12 @@ def _format_namespace_response(ns: dict) -> NamespaceResponse:
     response_model=NamespaceListResponse,
     summary="List all namespaces"
 )
-async def list_namespaces():
+async def list_namespaces(current_user: AuthenticatedUser):
     """
-    List all available namespaces from NeonDB.
+    List all available namespaces from NeonDB for the current user.
     
     Returns namespaces with document counts and metadata.
+    Users can only see their own namespaces.
     """
     if not settings.is_database_available:
         raise HTTPException(
@@ -80,7 +82,7 @@ async def list_namespaces():
         )
     
     try:
-        namespaces = await DocumentRepository.list_namespaces()
+        namespaces = await DocumentRepository.list_namespaces(user_id=current_user.id)
         
         formatted_namespaces = [
             _format_namespace_response(ns) for ns in namespaces
@@ -111,11 +113,12 @@ async def list_namespaces():
     response_model=NamespaceDetailResponse,
     summary="Get namespace details"
 )
-async def get_namespace(namespace_id: str):
+async def get_namespace(namespace_id: str, current_user: AuthenticatedUser):
     """
     Get detailed information about a specific namespace.
     
     Includes list of documents and statistics.
+    Users can only access their own namespaces.
     """
     if not settings.is_database_available:
         raise HTTPException(
@@ -148,6 +151,16 @@ async def get_namespace(namespace_id: str):
                 detail={
                     "code": "NAMESPACE_NOT_FOUND",
                     "message": f"Namespace {namespace_id} not found"
+                }
+            )
+        
+        # Check ownership
+        if namespace.get("user_id") and namespace["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "ACCESS_DENIED",
+                    "message": "You do not have access to this namespace"
                 }
             )
         
@@ -201,11 +214,12 @@ async def get_namespace(namespace_id: str):
     status_code=status.HTTP_201_CREATED,
     summary="Create a new namespace"
 )
-async def create_namespace(request: NamespaceCreate):
+async def create_namespace(request: NamespaceCreate, current_user: AuthenticatedUser):
     """
-    Create a new namespace in NeonDB.
+    Create a new namespace in NeonDB for the current user.
     
     The namespace will be available for organizing documents.
+    Namespace names must be unique per user.
     """
     if not settings.is_database_available:
         raise HTTPException(
@@ -217,8 +231,11 @@ async def create_namespace(request: NamespaceCreate):
         )
     
     try:
-        # Check if namespace already exists
-        existing = await DocumentRepository.get_namespace_by_name(request.name)
+        # Check if namespace already exists for this user
+        existing = await DocumentRepository.get_namespace_by_name_and_user(
+            request.name,
+            current_user.id
+        )
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -228,15 +245,16 @@ async def create_namespace(request: NamespaceCreate):
                 }
             )
         
-        # Create namespace
+        # Create namespace for the current user
         namespace = await DocumentRepository.create_namespace(
             name=request.name,
             description=request.description,
             default_dense_namespace=request.name,
             default_sparse_namespace=request.name,
+            user_id=current_user.id,
         )
         
-        logger.info(f"Created namespace: {request.name} (ID: {namespace['id']})")
+        logger.info(f"Created namespace: {request.name} (ID: {namespace['id']}) for user {current_user.email}")
         
         return _format_namespace_response(namespace)
         
@@ -262,7 +280,7 @@ async def create_namespace(request: NamespaceCreate):
     response_model=NamespaceDeleteResponse,
     summary="Delete a namespace and all its documents"
 )
-async def delete_namespace(namespace_id: str):
+async def delete_namespace(namespace_id: str, current_user: AuthenticatedUser):
     """
     Delete a namespace and cascade delete all associated documents.
     
@@ -270,6 +288,8 @@ async def delete_namespace(namespace_id: str):
     1. Gets all document IDs in the namespace from NeonDB
     2. Deletes all vectors from Pinecone for each document
     3. Deletes the namespace from NeonDB (cascades to documents)
+    
+    Users can only delete their own namespaces.
     
     ⚠️ Warning: This is a destructive operation that cannot be undone.
     """
@@ -306,8 +326,21 @@ async def delete_namespace(namespace_id: str):
                 }
             )
         
-        # Get all documents in this namespace
-        documents = await DocumentRepository.get_documents_by_namespace_id(ns_uuid)
+        # Check ownership
+        if namespace.get("user_id") and namespace["user_id"] != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "ACCESS_DENIED",
+                    "message": "You do not have access to this namespace"
+                }
+            )
+        
+        # Get all documents in this namespace (for this user)
+        documents = await DocumentRepository.get_documents_by_namespace_id(
+            ns_uuid,
+            user_id=current_user.id
+        )
         document_ids = [str(doc["id"]) for doc in documents]
         
         # Delete vectors from Pinecone for each document

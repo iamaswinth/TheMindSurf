@@ -194,22 +194,20 @@ export const DocumentListCompact: React.FC<DocumentListCompactProps> = ({
 
       {documents.map((doc) => {
         const isSelected = selectedDocuments.includes(doc.id);
-        const isInteractive = mode !== "namespace";
+        // Allow interaction in all modes - clicking in namespace mode will auto-switch to single mode
+        const isInteractive = true;
 
         return (
           <button
             key={doc.id}
-            onClick={() => isInteractive && onToggle(doc.id)}
-            disabled={!isInteractive}
+            onClick={() => onToggle(doc.id)}
             className={`
               w-full flex items-center gap-3 px-3 py-2 text-left transition-all duration-100
               border-3 border-transparent
               ${
                 isSelected
                   ? "bg-[#FF006E] text-white border-[#FF006E]"
-                  : isInteractive
-                  ? "text-white/70 hover:bg-[#FFFF00] hover:text-black hover:border-black"
-                  : "text-white/50"
+                  : "text-white/70 hover:bg-[#FFFF00] hover:text-black hover:border-black"
               }
             `}
           >

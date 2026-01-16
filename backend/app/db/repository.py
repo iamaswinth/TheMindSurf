@@ -2,6 +2,7 @@
 Document Repository
 
 Data access layer for documents and namespaces in NeonDB.
+Supports multi-tenant isolation with user_id filtering.
 """
 
 import logging
@@ -23,12 +24,13 @@ class DocumentRepository:
         description: Optional[str] = None,
         default_dense_namespace: Optional[str] = None,
         default_sparse_namespace: Optional[str] = None,
+        user_id: Optional[uuid.UUID] = None,
     ) -> Dict[str, Any]:
-        """Create a new namespace."""
+        """Create a new namespace for a user."""
         query = """
-        INSERT INTO namespaces (name, description, default_dense_namespace, default_sparse_namespace)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id, name, description, document_count, total_chunks, created_at, updated_at
+        INSERT INTO namespaces (name, description, default_dense_namespace, default_sparse_namespace, user_id)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id, name, description, document_count, total_chunks, user_id, created_at, updated_at
         """
         
         result = await db.execute_one(
@@ -36,17 +38,18 @@ class DocumentRepository:
             name, 
             description, 
             default_dense_namespace, 
-            default_sparse_namespace
+            default_sparse_namespace,
+            user_id
         )
         
         return dict(result) if result else None
     
     @staticmethod
     async def get_namespace_by_name(name: str) -> Optional[Dict[str, Any]]:
-        """Get namespace by name."""
+        """Get namespace by name (legacy - use get_namespace_by_name_and_user for multi-tenant)."""
         query = """
         SELECT id, name, description, document_count, total_chunks, 
-               default_dense_namespace, default_sparse_namespace,
+               default_dense_namespace, default_sparse_namespace, user_id,
                created_at, updated_at
         FROM namespaces
         WHERE name = $1
@@ -56,24 +59,61 @@ class DocumentRepository:
         return dict(result) if result else None
     
     @staticmethod
-    async def list_namespaces() -> List[Dict[str, Any]]:
-        """List all namespaces with calculated counts."""
+    async def get_namespace_by_name_and_user(
+        name: str,
+        user_id: uuid.UUID
+    ) -> Optional[Dict[str, Any]]:
+        """Get namespace by name for a specific user."""
         query = """
-        SELECT 
-            n.id, 
-            n.name, 
-            n.description, 
-            COUNT(DISTINCT dn.document_id) as document_count,
-            COALESCE(SUM(d.chunk_count), 0)::INTEGER as total_chunks,
-            n.created_at
-        FROM namespaces n
-        LEFT JOIN document_namespaces dn ON n.id = dn.namespace_id
-        LEFT JOIN documents d ON dn.document_id = d.id AND d.deleted_at IS NULL
-        GROUP BY n.id, n.name, n.description, n.created_at
-        ORDER BY n.created_at DESC
+        SELECT id, name, description, document_count, total_chunks, 
+               default_dense_namespace, default_sparse_namespace, user_id,
+               created_at, updated_at
+        FROM namespaces
+        WHERE name = $1 AND user_id = $2
         """
         
-        results = await db.execute_query(query)
+        result = await db.execute_one(query, name, user_id)
+        return dict(result) if result else None
+    
+    @staticmethod
+    async def list_namespaces(user_id: Optional[uuid.UUID] = None) -> List[Dict[str, Any]]:
+        """List all namespaces, optionally filtered by user."""
+        if user_id:
+            query = """
+            SELECT 
+                n.id, 
+                n.name, 
+                n.description, 
+                n.user_id,
+                COUNT(DISTINCT dn.document_id) as document_count,
+                COALESCE(SUM(d.chunk_count), 0)::INTEGER as total_chunks,
+                n.created_at
+            FROM namespaces n
+            LEFT JOIN document_namespaces dn ON n.id = dn.namespace_id
+            LEFT JOIN documents d ON dn.document_id = d.id AND d.deleted_at IS NULL
+            WHERE n.user_id = $1
+            GROUP BY n.id, n.name, n.description, n.user_id, n.created_at
+            ORDER BY n.created_at DESC
+            """
+            results = await db.execute_query(query, user_id)
+        else:
+            query = """
+            SELECT 
+                n.id, 
+                n.name, 
+                n.description, 
+                n.user_id,
+                COUNT(DISTINCT dn.document_id) as document_count,
+                COALESCE(SUM(d.chunk_count), 0)::INTEGER as total_chunks,
+                n.created_at
+            FROM namespaces n
+            LEFT JOIN document_namespaces dn ON n.id = dn.namespace_id
+            LEFT JOIN documents d ON dn.document_id = d.id AND d.deleted_at IS NULL
+            GROUP BY n.id, n.name, n.description, n.user_id, n.created_at
+            ORDER BY n.created_at DESC
+            """
+            results = await db.execute_query(query)
+        
         return [dict(row) for row in results]
     
     @staticmethod
@@ -91,8 +131,10 @@ class DocumentRepository:
         ai_enhancement_enabled: bool = True,
         dense_index_name: str = "rag-comparator-dense",
         sparse_index_name: str = "rag-comparator-sparse",
+        user_id: Optional[uuid.UUID] = None,
+        credits_used: int = 0,
     ) -> Dict[str, Any]:
-        """Create a new document record."""
+        """Create a new document record with user ownership."""
         query = """
         INSERT INTO documents (
             filename, original_filename, file_size_bytes, page_count,
@@ -100,11 +142,11 @@ class DocumentRepository:
             dense_index_name, sparse_index_name,
             processing_strategy, chunk_count, 
             total_chunks_with_tables, total_chunks_with_images,
-            ai_enhancement_enabled, processed_at
+            ai_enhancement_enabled, processed_at, user_id, credits_used
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), $14, $15)
         RETURNING id, filename, original_filename, file_size_bytes, page_count,
-                  pinecone_dense_namespace, chunk_count, 
+                  pinecone_dense_namespace, chunk_count, user_id, credits_used,
                   uploaded_at, processed_at
         """
         
@@ -123,9 +165,11 @@ class DocumentRepository:
             total_chunks_with_tables,
             total_chunks_with_images,
             ai_enhancement_enabled,
+            user_id,
+            credits_used,
         )
         
-        logger.info(f"Created document record: {filename} (ID: {result['id']})")
+        logger.info(f"Created document record: {filename} (ID: {result['id']}, User: {user_id})")
         return dict(result) if result else None
     
     @staticmethod
@@ -186,14 +230,41 @@ class DocumentRepository:
         namespace: Optional[str] = None,
         limit: int = 50,
         offset: int = 0,
+        user_id: Optional[uuid.UUID] = None,
     ) -> List[Dict[str, Any]]:
-        """List documents with optional namespace filter."""
-        if namespace:
+        """List documents with optional namespace and user filter."""
+        if namespace and user_id:
             query = """
             SELECT id, filename, original_filename, file_size_bytes, page_count,
                    pinecone_dense_namespace, chunk_count,
                    total_chunks_with_tables, total_chunks_with_images,
-                   uploaded_at, processed_at
+                   user_id, credits_used, uploaded_at, processed_at
+            FROM documents
+            WHERE pinecone_dense_namespace = $1 
+              AND user_id = $2
+              AND deleted_at IS NULL
+            ORDER BY uploaded_at DESC
+            LIMIT $3 OFFSET $4
+            """
+            results = await db.execute_query(query, namespace, user_id, limit, offset)
+        elif user_id:
+            query = """
+            SELECT id, filename, original_filename, file_size_bytes, page_count,
+                   pinecone_dense_namespace, chunk_count,
+                   total_chunks_with_tables, total_chunks_with_images,
+                   user_id, credits_used, uploaded_at, processed_at
+            FROM documents
+            WHERE user_id = $1 AND deleted_at IS NULL
+            ORDER BY uploaded_at DESC
+            LIMIT $2 OFFSET $3
+            """
+            results = await db.execute_query(query, user_id, limit, offset)
+        elif namespace:
+            query = """
+            SELECT id, filename, original_filename, file_size_bytes, page_count,
+                   pinecone_dense_namespace, chunk_count,
+                   total_chunks_with_tables, total_chunks_with_images,
+                   user_id, credits_used, uploaded_at, processed_at
             FROM documents
             WHERE pinecone_dense_namespace = $1 
               AND deleted_at IS NULL
@@ -206,7 +277,7 @@ class DocumentRepository:
             SELECT id, filename, original_filename, file_size_bytes, page_count,
                    pinecone_dense_namespace, chunk_count,
                    total_chunks_with_tables, total_chunks_with_images,
-                   uploaded_at, processed_at
+                   user_id, credits_used, uploaded_at, processed_at
             FROM documents
             WHERE deleted_at IS NULL
             ORDER BY uploaded_at DESC
@@ -224,7 +295,7 @@ class DocumentRepository:
                pinecone_dense_namespace, pinecone_sparse_namespace,
                chunk_count, total_chunks_with_tables, total_chunks_with_images,
                processing_strategy, ai_enhancement_enabled,
-               uploaded_at, processed_at
+               user_id, credits_used, uploaded_at, processed_at
         FROM documents
         WHERE id = $1 AND deleted_at IS NULL
         """
@@ -249,7 +320,7 @@ class DocumentRepository:
         """Get namespace by ID."""
         query = """
         SELECT id, name, description, document_count, total_chunks, 
-               default_dense_namespace, default_sparse_namespace,
+               default_dense_namespace, default_sparse_namespace, user_id,
                created_at, updated_at
         FROM namespaces
         WHERE id = $1
@@ -262,22 +333,39 @@ class DocumentRepository:
     async def get_documents_by_namespace_id(
         namespace_id: uuid.UUID,
         limit: int = 1000,
+        user_id: Optional[uuid.UUID] = None,
     ) -> List[Dict[str, Any]]:
-        """Get all documents linked to a namespace."""
-        query = """
-        SELECT d.id, d.filename, d.original_filename, d.file_size_bytes, d.page_count,
-               d.pinecone_dense_namespace, d.chunk_count,
-               d.total_chunks_with_tables, d.total_chunks_with_images,
-               d.processing_strategy, d.uploaded_at, d.processed_at
-        FROM documents d
-        JOIN document_namespaces dn ON d.id = dn.document_id
-        WHERE dn.namespace_id = $1 
-          AND d.deleted_at IS NULL
-        ORDER BY d.uploaded_at DESC
-        LIMIT $2
-        """
+        """Get all documents linked to a namespace, optionally filtered by user."""
+        if user_id:
+            query = """
+            SELECT d.id, d.filename, d.original_filename, d.file_size_bytes, d.page_count,
+                   d.pinecone_dense_namespace, d.chunk_count,
+                   d.total_chunks_with_tables, d.total_chunks_with_images,
+                   d.processing_strategy, d.user_id, d.credits_used, d.uploaded_at, d.processed_at
+            FROM documents d
+            JOIN document_namespaces dn ON d.id = dn.document_id
+            WHERE dn.namespace_id = $1 
+              AND d.user_id = $2
+              AND d.deleted_at IS NULL
+            ORDER BY d.uploaded_at DESC
+            LIMIT $3
+            """
+            results = await db.execute_query(query, namespace_id, user_id, limit)
+        else:
+            query = """
+            SELECT d.id, d.filename, d.original_filename, d.file_size_bytes, d.page_count,
+                   d.pinecone_dense_namespace, d.chunk_count,
+                   d.total_chunks_with_tables, d.total_chunks_with_images,
+                   d.processing_strategy, d.user_id, d.credits_used, d.uploaded_at, d.processed_at
+            FROM documents d
+            JOIN document_namespaces dn ON d.id = dn.document_id
+            WHERE dn.namespace_id = $1 
+              AND d.deleted_at IS NULL
+            ORDER BY d.uploaded_at DESC
+            LIMIT $2
+            """
+            results = await db.execute_query(query, namespace_id, limit)
         
-        results = await db.execute_query(query, namespace_id, limit)
         return [dict(row) for row in results]
 
     @staticmethod
@@ -292,15 +380,23 @@ class DocumentRepository:
         logger.info(f"Deleted namespace: {namespace_id}")
 
     @staticmethod
-    async def get_document_count() -> int:
-        """Get total count of non-deleted documents."""
-        query = """
-        SELECT COUNT(*) as count
-        FROM documents
-        WHERE deleted_at IS NULL
-        """
+    async def get_document_count(user_id: Optional[uuid.UUID] = None) -> int:
+        """Get total count of non-deleted documents, optionally filtered by user."""
+        if user_id:
+            query = """
+            SELECT COUNT(*) as count
+            FROM documents
+            WHERE deleted_at IS NULL AND user_id = $1
+            """
+            result = await db.execute_one(query, user_id)
+        else:
+            query = """
+            SELECT COUNT(*) as count
+            FROM documents
+            WHERE deleted_at IS NULL
+            """
+            result = await db.execute_one(query)
         
-        result = await db.execute_one(query)
         return result["count"] if result else 0
 
     @staticmethod

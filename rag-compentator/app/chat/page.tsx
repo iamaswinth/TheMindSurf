@@ -254,6 +254,14 @@ function ChatPageContent() {
   }, []);
 
   const handleToggleDocument = (docId: string) => {
+    // Find the document to get its namespace
+    const doc = documents.find((d) => d.id === docId);
+
+    // Auto-select the document's namespace if it's different from current
+    if (doc && doc.namespace !== selectedNamespace) {
+      setSelectedNamespace(doc.namespace);
+    }
+
     if (chatMode === "single") {
       setSelectedDocuments([docId]);
     } else if (chatMode === "multi") {
@@ -262,6 +270,10 @@ function ChatPageContent() {
       } else {
         setSelectedDocuments([...selectedDocuments, docId]);
       }
+    } else if (chatMode === "namespace") {
+      // Auto-switch from namespace mode to single document mode when clicking a document
+      setChatMode("single");
+      setSelectedDocuments([docId]);
     }
   };
 

@@ -11,6 +11,7 @@ import {
   SettingsIcon,
   UserIcon,
 } from "./Icons";
+import { useAuth } from "@/lib/auth-context";
 
 interface NavItem {
   icon: React.ReactNode;
@@ -59,6 +60,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
   const pathname = usePathname();
+  const { user, isAuthenticated, logout } = useAuth();
 
   return (
     <>
@@ -128,19 +130,78 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
 
         {/* User section - BRUTAL */}
         <div className="p-4 border-t-4 border-[#FFFF00]">
-          <div className="flex items-center gap-3 px-4 py-3 bg-[#FFFF00] border-4 border-black shadow-[4px_4px_0px_#000] cursor-pointer hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all duration-100">
-            <div className="w-10 h-10 bg-black flex items-center justify-center">
-              <UserIcon size={18} className="text-[#FFFF00]" />
+          {isAuthenticated && user ? (
+            <div className="space-y-2">
+              {/* Credits display */}
+              <div className="flex items-center justify-between px-4 py-2 bg-[#00FFFF] border-4 border-black">
+                <span className="text-xs font-black text-black uppercase">
+                  Credits
+                </span>
+                <span className="text-lg font-black text-black">
+                  {user.credits}
+                </span>
+              </div>
+
+              {/* User info */}
+              <Link
+                href="/profile"
+                className="flex items-center gap-3 px-4 py-3 bg-[#FFFF00] border-4 border-black shadow-[4px_4px_0px_#000] cursor-pointer hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all duration-100"
+              >
+                {user.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt=""
+                    className="w-10 h-10 border-2 border-black"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-black flex items-center justify-center">
+                    <UserIcon size={18} className="text-[#FFFF00]" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black text-black uppercase truncate">
+                    {user.display_name || "USER"}
+                  </p>
+                  <p className="text-xs font-bold text-black/70 truncate">
+                    {user.email}
+                  </p>
+                </div>
+              </Link>
+
+              {/* Admin link */}
+              {user.role === "admin" && (
+                <Link
+                  href="/admin"
+                  className="block px-4 py-2 bg-[#9D00FF] border-4 border-black text-center font-black text-white uppercase text-sm hover:shadow-[4px_4px_0px_#000] transition-all"
+                >
+                  Admin Dashboard
+                </Link>
+              )}
+
+              {/* Logout button */}
+              <button
+                onClick={logout}
+                className="w-full px-4 py-2 bg-[#FF006E] border-4 border-black text-center font-black text-white uppercase text-sm hover:shadow-[4px_4px_0px_#000] transition-all"
+              >
+                Sign Out
+              </button>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-black text-black uppercase truncate">
-                USER
-              </p>
-              <p className="text-xs font-bold text-black/70 truncate">
-                user@example.com
-              </p>
+          ) : (
+            <div className="space-y-2">
+              <Link
+                href="/login"
+                className="block px-4 py-3 bg-[#FFFF00] border-4 border-black text-center font-black text-black uppercase text-sm shadow-[4px_4px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#000] transition-all duration-100"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/register"
+                className="block px-4 py-3 bg-[#00FFFF] border-4 border-black text-center font-black text-black uppercase text-sm hover:shadow-[4px_4px_0px_#000] transition-all"
+              >
+                Create Account
+              </Link>
             </div>
-          </div>
+          )}
         </div>
       </aside>
     </>

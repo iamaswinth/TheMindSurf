@@ -3,6 +3,7 @@ import { Space_Grotesk, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/lib/context";
 import { QueryProvider } from "@/lib/providers";
+// import { generateBaseMetadata } from "@/lib/metadata";
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-space-grotesk",

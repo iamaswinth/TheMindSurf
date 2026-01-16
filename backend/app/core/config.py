@@ -7,6 +7,7 @@ settings are defined and validated here.
 
 Configuration Categories:
 - Application: Basic app settings (name, version, debug mode)
+- Authentication: JWT secrets, OAuth settings, token expiry
 - OpenAI: API key, model settings for vision and text processing
 - Multimodal Processing: Chunking parameters, processing strategies
 - File Handling: Upload limits, supported formats
@@ -15,6 +16,9 @@ Environment Variables:
 - OPENAI_API_KEY: Required for AI enhancement features
 - OPENAI_VISION_MODEL: Model for vision processing (default: gpt-4o)
 - MAX_FILE_SIZE_MB: Maximum file upload size (default: 50MB)
+- JWT_SECRET_KEY: Required for authentication
+- GITHUB_CLIENT_ID: Required for GitHub OAuth
+- GITHUB_CLIENT_SECRET: Required for GitHub OAuth
 """
 
 from typing import Optional
@@ -53,6 +57,54 @@ class Settings(BaseSettings):
     DEBUG: bool = Field(
         default=False,
         description="Enable debug mode with verbose logging"
+    )
+    FRONTEND_URL: str = Field(
+        default="http://localhost:3000",
+        description="Frontend URL for OAuth redirects and CORS"
+    )
+    
+    # ==========================================================================
+    # Authentication Settings
+    # ==========================================================================
+    JWT_SECRET_KEY: str = Field(
+        default="your-secret-key-change-in-production",
+        description="Secret key for JWT token signing"
+    )
+    JWT_ALGORITHM: str = Field(
+        default="HS256",
+        description="Algorithm for JWT token signing"
+    )
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
+        default=30,
+        description="Access token expiry time in minutes"
+    )
+    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(
+        default=7,
+        description="Refresh token expiry time in days"
+    )
+    
+    # GitHub OAuth Settings
+    GITHUB_CLIENT_ID: Optional[str] = Field(
+        default=None,
+        description="GitHub OAuth App Client ID"
+    )
+    GITHUB_CLIENT_SECRET: Optional[str] = Field(
+        default=None,
+        description="GitHub OAuth App Client Secret"
+    )
+    GITHUB_REDIRECT_URI: str = Field(
+        default="http://localhost:8000/api/v1/auth/github/callback",
+        description="GitHub OAuth callback URL"
+    )
+    
+    # Credits System
+    INITIAL_USER_CREDITS: int = Field(
+        default=3,
+        description="Number of credits given to new users"
+    )
+    AI_UPLOAD_CREDIT_COST: int = Field(
+        default=1,
+        description="Credits required for AI-enhanced upload"
     )
     
     # ==========================================================================
@@ -225,6 +277,11 @@ class Settings(BaseSettings):
     def is_database_available(self) -> bool:
         """Check if NeonDB database is configured."""
         return bool(self.DATABASE_URL)
+    
+    @property
+    def is_github_oauth_available(self) -> bool:
+        """Check if GitHub OAuth is configured."""
+        return bool(self.GITHUB_CLIENT_ID and self.GITHUB_CLIENT_SECRET)
     
     def validate_ai_config(self) -> tuple[bool, str]:
         """
