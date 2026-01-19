@@ -18,34 +18,30 @@ const spaceMono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TheMindSurf - AI-Powered Document Chat & Analysis Platform",
+  title: "TheMindSurf - Chat with Your Documents Like Never Before",
   description:
-    "Transform how you interact with documents. Chat with PDFs, extract insights, and get AI-powered answers instantly using advanced RAG technology.",
+    "Upload PDFs, ask questions in plain English, and get instant AI-powered answers with source citations. Smart search, multi-document analysis, and advanced RAG technology.",
   keywords: [
     "RAG",
     "AI",
     "Chat",
     "Documents",
-    "Machine Learning",
-    "Q&A",
-    "PDF",
+    "PDF Chat",
     "Document Analysis",
+    "AI Answers",
+    "Source Citations",
+    "Smart Search",
+    "Multi-Document Search",
+    "OCR",
+    "Table Extraction",
   ],
   authors: [{ name: "TheMindSurf" }],
   openGraph: {
-    title: "TheMindSurf - AI-Powered Document Chat & Analysis Platform",
+    title: "TheMindSurf - Chat with Your Documents Like Never Before",
     description:
-      "Transform how you interact with documents. Chat with PDFs, extract insights, and get AI-powered answers instantly using advanced RAG technology.",
+      "Upload PDFs, ask questions in plain English, and get instant AI-powered answers with source citations. Smart search, multi-document analysis, and advanced RAG technology.",
     url: "https://the-mind-surf-69.vercel.app",
     siteName: "TheMindSurf",
-    images: [
-      {
-        url: "/opengraph-image",
-        width: 1200,
-        height: 630,
-        alt: "TheMindSurf - AI-Powered Document Chat & Analysis Platform",
-      },
-    ],
     locale: "en_US",
     type: "website",
   },
@@ -54,7 +50,6 @@ export const metadata: Metadata = {
     title: "TheMindSurf - AI-Powered Document Chat & Analysis Platform",
     description:
       "Transform how you interact with documents. Chat with PDFs, extract insights, and get AI-powered answers instantly using advanced RAG technology.",
-    images: ["/opengraph-image"],
   },
   metadataBase: new URL("https://the-mind-surf-69.vercel.app"),
 };
