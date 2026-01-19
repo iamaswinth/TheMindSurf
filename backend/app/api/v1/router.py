@@ -6,10 +6,16 @@ Aggregates all API version routers for inclusion in the main application.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import documents, search, namespaces, chat, auth, admin
+from app.api.v1.endpoints import documents, search, namespaces, chat, auth, admin, public
 
 # Create main API v1 router
 api_router = APIRouter()
+
+# Include public router (no auth required)
+api_router.include_router(
+    public.router,
+    tags=["public"]
+)
 
 # Include authentication router (no auth required for these endpoints)
 api_router.include_router(

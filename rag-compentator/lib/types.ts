@@ -297,6 +297,13 @@ export interface Toast {
   duration?: number;
 }
 
+// Public Stats Types
+export interface PublicStats {
+  total_documents: number;
+  total_users: number;
+  total_questions: number;
+}
+
 // Modal Types
 export type ModalType = "upload" | "settings" | "confirm" | null;
 

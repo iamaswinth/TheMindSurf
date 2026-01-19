@@ -22,6 +22,7 @@ import {
 import Link from "next/link";
 import { useNamespaces, useCreateNamespace } from "@/lib/hooks/use-namespaces";
 import { useDocuments, useUploadDocument } from "@/lib/hooks/use-documents";
+import { usePublicStats } from "@/lib/hooks/use-public-stats";
 import { useAuth } from "@/lib/auth-context";
 
 // FAQ Accordion Item Component
@@ -64,7 +65,7 @@ function FAQItem({
 function LandingPage() {
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [documentCount, setDocumentCount] = useState(127453);
+  const { data: stats } = usePublicStats();
 
   // Scroll detection for sticky nav
   useEffect(() => {
@@ -73,14 +74,6 @@ function LandingPage() {
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Live counter animation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setDocumentCount((prev) => prev + Math.floor(Math.random() * 3));
-    }, 3000);
-    return () => clearInterval(interval);
   }, []);
 
   const faqData = [
@@ -196,7 +189,8 @@ function LandingPage() {
             <div className="animate-fadeIn">
               <div className="inline-block bg-[#CCFF00] border-4 border-black px-4 py-2 mb-6 shadow-[4px_4px_0px_#000]">
                 <span className="font-black uppercase text-sm">
-                  🚀 {documentCount.toLocaleString()} Documents Processed Today
+                  🚀 {stats?.total_documents.toLocaleString() || "Loading..."}{" "}
+                  Documents Processed
                 </span>
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-black uppercase tracking-tight mb-6 leading-tight">
@@ -213,9 +207,11 @@ function LandingPage() {
                     Start Free Trial →
                   </button>
                 </Link>
-                <button className="w-full sm:w-auto px-8 py-4 bg-white text-black font-black uppercase border-4 border-black shadow-[6px_6px_0px_#000] hover:shadow-[8px_8px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-100 text-lg flex items-center justify-center gap-2">
-                  <span>▶</span> Watch Demo
-                </button>
+                <a href="#features" className="w-full sm:w-auto">
+                  <button className="w-full sm:w-auto px-8 py-4 bg-white text-black font-black uppercase border-4 border-black shadow-[6px_6px_0px_#000] hover:shadow-[8px_8px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-100 text-lg flex items-center justify-center gap-2">
+                    <span>📚</span> See Examples
+                  </button>
+                </a>
               </div>
               <p className="mt-4 text-sm font-bold text-black/50">
                 No credit card required • 3 free credits to start
@@ -273,25 +269,47 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* Social Proof Bar */}
+      {/* Live Stats Bar */}
       <section className="py-8 md:py-12 px-4 md:px-6 bg-black">
         <div className="max-w-7xl mx-auto">
           <p className="text-center text-white font-bold uppercase text-sm mb-8">
-            Trusted by researchers, legal teams, and analysts at:
+            ⚡ REAL-TIME PLATFORM STATS ⚡
           </p>
-          <div className="flex flex-wrap justify-center items-center gap-6 md:gap-12">
-            {["Stanford", "MIT", "Google", "Microsoft", "Harvard", "Tesla"].map(
-              (company) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+            {[
+              {
+                label: "Documents Processed",
+                value: stats?.total_documents.toLocaleString() || "...",
+                color: "#FFFF00",
+              },
+              {
+                label: "Active Users",
+                value: stats?.total_users.toLocaleString() || "...",
+                color: "#00FFFF",
+              },
+              {
+                label: "Chunks Created",
+                value: stats?.total_questions.toLocaleString() || "...",
+                color: "#FF006E",
+              },
+              { label: "Avg. Response Time", value: "< 5s", color: "#CCFF00" },
+            ].map((stat, i) => (
+              <div
+                key={i}
+                className="bg-[#1a1a1a] border-4 border-white p-4 text-center"
+                style={{ boxShadow: `4px 4px 0px ${stat.color}` }}
+              >
                 <div
-                  key={company}
-                  className="bg-white border-4 border-black px-4 py-2 shadow-[4px_4px_0px_#FFFF00]"
+                  className="text-2xl md:text-3xl font-black mb-2"
+                  style={{ color: stat.color }}
                 >
-                  <span className="font-black text-black uppercase text-sm md:text-base">
-                    {company}
-                  </span>
+                  {stat.value}
                 </div>
-              )
-            )}
+                <div className="text-white/70 font-bold text-xs md:text-sm uppercase">
+                  {stat.label}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -876,71 +894,68 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
+      {/* Real Impact Section */}
       <section className="py-16 md:py-24 px-4 md:px-6 bg-[#00FFFF]">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-5xl font-black text-black uppercase tracking-tight">
-              Don't Just Take
-              <span className="block">Our Word For It</span>
+              Real Results
+              <span className="block">From Day One</span>
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
-                quote:
-                  "TheMindSurf has completely transformed how I do research. What used to take hours now takes minutes.",
-                name: "Dr. Sarah Chen",
-                role: "Research Scientist",
-                company: "Stanford University",
-                rating: 5,
+                icon: "⚡",
+                metric: "10x Faster",
+                title: "Document Research",
+                desc: "Find information in seconds instead of spending hours manually scrolling through PDFs",
+                color: "#FFFF00",
               },
               {
-                quote:
-                  "We've reduced document review time by 70%. The citation feature is a game-changer for legal work.",
-                name: "Michael Torres",
-                role: "Senior Partner",
-                company: "Torres & Associates",
-                rating: 5,
+                icon: "🎯",
+                metric: "95%+",
+                title: "Accuracy Rate",
+                desc: "AI-powered semantic search with exact source citations means you can trust every answer",
+                color: "#FF006E",
               },
               {
-                quote:
-                  "Finally, a tool that actually understands what I'm looking for. The semantic search is incredibly accurate.",
-                name: "Emma Williams",
-                role: "Business Analyst",
-                company: "McKinsey & Co",
-                rating: 5,
+                icon: "💰",
+                metric: "70% Savings",
+                title: "Time & Resources",
+                desc: "Stop paying teams to manually search documents. Automate the grunt work, focus on insights",
+                color: "#CCFF00",
               },
-            ].map((testimonial, i) => (
+            ].map((benefit, i) => (
               <div
                 key={i}
-                className="bg-white border-4 border-black p-6 shadow-[6px_6px_0px_#000]"
+                className="bg-white border-4 border-black p-6 shadow-[6px_6px_0px_#000] hover:shadow-[8px_8px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-100"
               >
-                <div className="flex gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, j) => (
-                    <span key={j} className="text-[#FFFF00] text-xl">
-                      ★
-                    </span>
-                  ))}
+                <div className="text-center mb-4">
+                  <span className="text-5xl mb-3 block">{benefit.icon}</span>
+                  <div
+                    className="inline-block px-4 py-2 border-4 border-black font-black text-xl md:text-2xl"
+                    style={{ backgroundColor: benefit.color }}
+                  >
+                    {benefit.metric}
+                  </div>
                 </div>
-                <p className="font-bold text-black/80 mb-6 italic">
-                  "{testimonial.quote}"
+                <h3 className="text-xl font-black uppercase mb-3 text-center">
+                  {benefit.title}
+                </h3>
+                <p className="font-bold text-black/70 text-center">
+                  {benefit.desc}
                 </p>
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-[#FF006E] border-4 border-black flex items-center justify-center">
-                    <span className="text-white font-black">
-                      {testimonial.name[0]}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-black text-sm">{testimonial.name}</p>
-                    <p className="font-bold text-black/60 text-xs">
-                      {testimonial.role}, {testimonial.company}
-                    </p>
-                  </div>
-                </div>
               </div>
             ))}
+          </div>
+          <div className="mt-12 text-center">
+            <div className="inline-block bg-black border-4 border-black px-6 py-4 shadow-[6px_6px_0px_#FFFF00]">
+              <p className="text-white font-black text-lg md:text-xl uppercase">
+                🚀 Join {stats?.total_users.toLocaleString() || "thousands of"}+
+                users already saving time
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -984,9 +999,11 @@ function LandingPage() {
                 Start Free Trial →
               </button>
             </Link>
-            <button className="w-full sm:w-auto px-8 py-4 bg-white text-black font-black uppercase border-4 border-black shadow-[6px_6px_0px_#000] hover:shadow-[8px_8px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-100 text-lg">
-              Schedule a Demo
-            </button>
+            <a href="#faq" className="w-full sm:w-auto">
+              <button className="w-full sm:w-auto px-8 py-4 bg-white text-black font-black uppercase border-4 border-black shadow-[6px_6px_0px_#000] hover:shadow-[8px_8px_0px_#000] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all duration-100 text-lg">
+                💡 Learn More
+              </button>
+            </a>
           </div>
           <p className="font-bold text-black/60">
             No credit card required • 3 free credits to start
@@ -1152,15 +1169,30 @@ function LandingPage() {
               © 2026 TheMindSurf — Built with RAG Technology
             </p>
             <div className="flex items-center gap-4">
-              {["Twitter", "LinkedIn", "GitHub"].map((social) => (
-                <a
-                  key={social}
-                  href="#"
-                  className="bg-white/10 border-2 border-white/30 px-3 py-1 font-bold text-sm hover:bg-[#00FFFF] hover:text-black hover:border-[#00FFFF] transition-all"
-                >
-                  {social}
-                </a>
-              ))}
+              <a
+                href="https://x.com/iamaswinth"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white/10 border-2 border-white/30 px-3 py-1 font-bold text-sm hover:bg-[#00FFFF] hover:text-black hover:border-[#00FFFF] transition-all"
+              >
+                Twitter
+              </a>
+              <a
+                href="https://www.linkedin.com/in/aswinthraj-d-362a18291/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white/10 border-2 border-white/30 px-3 py-1 font-bold text-sm hover:bg-[#00FFFF] hover:text-black hover:border-[#00FFFF] transition-all"
+              >
+                LinkedIn
+              </a>
+              <a
+                href="https://github.com/iamaswinth/TheMindSurf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white/10 border-2 border-white/30 px-3 py-1 font-bold text-sm hover:bg-[#00FFFF] hover:text-black hover:border-[#00FFFF] transition-all"
+              >
+                GitHub
+              </a>
             </div>
           </div>
         </div>

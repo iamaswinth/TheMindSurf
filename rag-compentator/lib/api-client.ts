@@ -13,6 +13,7 @@ import {
   DeleteNamespaceResponse,
   UploadSettings,
   MultimodalProcessResponse,
+  PublicStats,
 } from "./types";
 
 // API Error Class
@@ -462,6 +463,14 @@ class ApiClient {
     });
 
     return this.request<any[]>(`/search?${params}`);
+  }
+
+  // ===========================================================================
+  // Public Endpoints (No Auth Required)
+  // ===========================================================================
+
+  async getPublicStats(): Promise<PublicStats> {
+    return this.request<PublicStats>("/public/stats", {}, true);
   }
 }
 
