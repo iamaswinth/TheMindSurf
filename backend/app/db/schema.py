@@ -115,18 +115,22 @@ CREATE INDEX IF NOT EXISTS idx_credit_requests_status ON credit_requests(status)
 """
 
 # =============================================================================
-# MIGRATIONS
+# MIGRATIONS (DISABLED - ONLY RUN MANUALLY IF NEEDED)
 # =============================================================================
 
+# ⚠️ WARNING: This migration drops all data!
+# Only uncomment and run manually if you need to reset the database schema.
+# DO NOT include this in INIT_SCHEMA as it will delete data on every deployment.
+
 # Drop old tables if they exist and create new ones with user_id
-MIGRATE_OLD_TABLES = """
--- Drop old table structure (in correct order due to foreign keys)
-DROP TABLE IF EXISTS document_namespaces CASCADE;
-DROP TABLE IF EXISTS chunks CASCADE;
-DROP TABLE IF EXISTS credit_transactions CASCADE;
-DROP TABLE IF EXISTS documents CASCADE;
-DROP TABLE IF EXISTS namespaces CASCADE;
-"""
+# MIGRATE_OLD_TABLES = """
+# -- Drop old table structure (in correct order due to foreign keys)
+# DROP TABLE IF EXISTS document_namespaces CASCADE;
+# DROP TABLE IF EXISTS chunks CASCADE;
+# DROP TABLE IF EXISTS credit_transactions CASCADE;
+# DROP TABLE IF EXISTS documents CASCADE;
+# DROP TABLE IF EXISTS namespaces CASCADE;
+# """
 
 # =============================================================================
 # NAMESPACE & DOCUMENT TABLES
@@ -268,10 +272,10 @@ INIT_SCHEMA = [
     # First: Create user tables (needed for foreign keys)
     CREATE_USERS_TABLE,
     
-    # Second: Migrate old tables (drop if exist)
-    MIGRATE_OLD_TABLES,
+    # MIGRATION REMOVED: No longer drops tables on startup
+    # This ensures data persists across deployments
     
-    # Third: Create new tables with proper structure
+    # Create tables only if they don't exist (CREATE TABLE IF NOT EXISTS)
     CREATE_NAMESPACES_TABLE,
     CREATE_DOCUMENTS_TABLE,
     CREATE_DOCUMENT_NAMESPACES_TABLE,
