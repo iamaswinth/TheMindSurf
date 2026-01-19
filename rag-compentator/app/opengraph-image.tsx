@@ -10,6 +10,19 @@ export const size = {
 export const contentType = "image/png";
 
 export default async function Image() {
+  // Fetch real-time stats
+  let stats = { total_documents: 0, total_users: 0, total_questions: 0 };
+  try {
+    const response = await fetch("http://127.0.0.1:8000/api/v1/public/stats", {
+      cache: "no-store",
+    });
+    if (response.ok) {
+      stats = await response.json();
+    }
+  } catch (error) {
+    console.error("Failed to fetch stats for OG image:", error);
+  }
+
   return new ImageResponse(
     (
       <div
@@ -55,7 +68,7 @@ export default async function Image() {
                 letterSpacing: "0.5px",
               }}
             >
-              🚀 127,459 DOCUMENTS PROCESSED TODAY
+              🚀 {stats.total_documents.toLocaleString()} DOCUMENTS PROCESSED
             </span>
           </div>
 
@@ -151,7 +164,7 @@ export default async function Image() {
               </span>
             </div>
 
-            {/* Watch Demo Button */}
+            {/* See Examples Button */}
             <div
               style={{
                 display: "flex",
@@ -170,7 +183,7 @@ export default async function Image() {
                   color: "#000000",
                 }}
               >
-                ▶ WATCH DEMO
+                📚 SEE EXAMPLES
               </span>
             </div>
           </div>
