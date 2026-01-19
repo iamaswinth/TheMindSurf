@@ -36,6 +36,11 @@ export const metadata: Metadata = {
     "Table Extraction",
   ],
   authors: [{ name: "TheMindSurf" }],
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/logo-icon.svg",
+  },
   openGraph: {
     title: "TheMindSurf - Chat with Your Documents Like Never Before",
     description:

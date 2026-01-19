@@ -11,6 +11,7 @@ import {
   SettingsIcon,
   UserIcon,
 } from "./Icons";
+import { LogoAnimated } from "./Logo";
 import { useAuth } from "@/lib/auth-context";
 
 interface NavItem {
@@ -83,14 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
       >
         {/* Logo - BRUTAL */}
         <div className="h-20 flex items-center px-6 border-b-4 border-[#FFFF00] bg-[#FF006E]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#FFFF00] border-3 border-black flex items-center justify-center shadow-[3px_3px_0px_#000]">
-              <MessageSquareIcon size={20} className="text-black" />
-            </div>
-            <span className="text-xl font-black text-white uppercase tracking-tight">
-              The Mind Surf
-            </span>
-          </div>
+          <LogoAnimated size="md" showText={true} />
         </div>
 
         {/* Navigation - BRUTAL */}
