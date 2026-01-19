@@ -48,6 +48,103 @@ export default async function Image() {
             position: "relative",
           }}
         >
+          {/* Logo & Brand */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "16px",
+              marginBottom: "20px",
+            }}
+          >
+            {/* Custom Logo */}
+            <div
+              style={{
+                width: "56px",
+                height: "56px",
+                border: "4px solid #FF006E",
+                backgroundColor: "#FFFF00",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                position: "relative",
+              }}
+            >
+              {/* Brain wave (top) - simplified as a zigzag shape */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "12px",
+                  left: "8px",
+                  right: "8px",
+                  height: "3px",
+                  backgroundColor: "#000000",
+                  display: "flex",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  top: "8px",
+                  left: "14px",
+                  width: "3px",
+                  height: "8px",
+                  backgroundColor: "#000000",
+                  display: "flex",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  top: "8px",
+                  left: "24px",
+                  width: "3px",
+                  height: "8px",
+                  backgroundColor: "#000000",
+                  display: "flex",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  top: "8px",
+                  left: "34px",
+                  width: "3px",
+                  height: "8px",
+                  backgroundColor: "#000000",
+                  display: "flex",
+                }}
+              />
+
+              {/* Surf wave (bottom) */}
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "12px",
+                  left: "8px",
+                  right: "8px",
+                  height: "12px",
+                  backgroundColor: "#00FFFF",
+                  borderRadius: "50% 50% 0 0",
+                  display: "flex",
+                }}
+              />
+            </div>
+
+            {/* Brand Name */}
+            <span
+              style={{
+                fontSize: "28px",
+                fontWeight: 900,
+                textTransform: "uppercase",
+                color: "#000000",
+                letterSpacing: "-0.5px",
+              }}
+            >
+              TheMindSurf
+            </span>
+          </div>
+
           {/* Top Badge */}
           <div
             style={{

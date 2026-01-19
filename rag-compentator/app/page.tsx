@@ -141,7 +141,7 @@ function LandingPage() {
       >
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <LogoIcon size={36} />
+            {/* <LogoIcon size={36} /> */}
             <h1 className="text-xl md:text-2xl font-black text-black uppercase tracking-tight">
               TheMindSurf
             </h1>
